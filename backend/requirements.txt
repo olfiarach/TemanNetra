@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+watchfiles
+ultralytics
+torch
+torchvision
+gTTS
+pillow
+python-multipart

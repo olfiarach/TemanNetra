@@ -1,0 +1,35 @@
+# Python & Virtual Environments
+venv
+venv/
+backend/venv
+backend/venv/
+env/
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node.js & Frontend builds
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+.vite/
+
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Large Datasets & Training Runs (> 500MB)
+backend/data/images/
+backend/data/labels/
+runs/
+*.log
+
+# Large Model Weights (> 100MB - exceeds GitHub file size limit)
+models/best.pt
+models/best_downloaded.pt
