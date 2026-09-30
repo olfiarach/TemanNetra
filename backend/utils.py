@@ -155,8 +155,8 @@ AUDIO_CACHE: Dict[str, str] = {}
 
 def is_valid_banknote_geometry(xyxy: List[float], img_w: int, img_h: int) -> bool:
     """
-    Validate banknote geometry to discard tiny noise artifacts and extreme thin slivers.
-    Allows normal camera distance and tilted banknotes.
+    Validate banknote geometry to discard tiny noise artifacts, extreme thin slivers,
+    and full-screen hallucinations (boxes covering > 78% of the camera screen).
     """
     if img_w <= 0 or img_h <= 0:
         return False
@@ -173,11 +173,32 @@ def is_valid_banknote_geometry(xyxy: List[float], img_w: int, img_h: int) -> boo
     if area_ratio < 0.015:
         return False
 
-    # 2. Reject 1-pixel artifacts
+    # 2. Reject full-screen scene hallucinations (> 75% of the camera frame)
+    # A banknote held in hand never covers the entire screen from edge to edge
+    if area_ratio > 0.75:
+        return False
+
+    # 3. Reject boxes spanning almost the entire width AND height simultaneously
+    if bw >= 0.88 * img_w and bh >= 0.88 * img_h:
+        return False
+
+    # 4. Reject wide horizontal strips glued to the bottom border (keyboard / desk surface)
+    if xyxy[3] >= 0.95 * img_h and bw >= 0.50 * img_w:
+        return False
+
+    # 5. Reject tall vertical columns glued to the bottom border (user's body / torso in front of webcam)
+    if xyxy[3] >= 0.95 * img_h and bh >= 0.65 * img_h:
+        return False
+
+    # 6. Reject full-height vertical columns (ceiling to desk)
+    if bh >= 0.85 * img_h:
+        return False
+
+    # 7. Reject 1-pixel artifacts
     if bw < 0.05 * img_w or bh < 0.05 * img_h:
         return False
 
-    # 3. Discard extreme thin lines (> 4.5 aspect ratio)
+    # 8. Discard extreme thin lines (> 4.5 aspect ratio)
     aspect_ratio = max(bw, bh) / max(min(bw, bh), 1.0)
     if aspect_ratio > 4.5:
         return False

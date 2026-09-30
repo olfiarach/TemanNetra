@@ -67,12 +67,12 @@ async def predict_rupiah(file: UploadFile = File(...)):
     img_w, img_h = image.size
     
     # 2. Perform object detection with:
-    # - conf=0.65: balanced confidence threshold for responsive real-world webcam scanning
+    # - conf=0.84: strictly filters out facial/room/keyboard false alarms while detecting real banknotes (>0.90)
     # - iou=0.35: tight bounding box overlap suppression
     # - agnostic_nms=True: suppresses overlapping detections of different classes on the same note
     results = model(
         image,
-        conf=0.65,
+        conf=0.84,
         iou=0.35,
         agnostic_nms=True,
         verbose=False
@@ -116,6 +116,9 @@ async def predict_rupiah(file: UploadFile = File(...)):
     # 4. Spatial deduplication (NMS) to eliminate multiple boxes for the same physical banknote
     final_boxes = deduplicate_boxes(candidate_boxes, iou_threshold=0.20, containment_threshold=0.40)
     detected_notes = [b["label"] for b in final_boxes]
+
+    if detected_notes:
+        print(f"⚠️ DETECTED: {detected_notes} | Boxes: {[ (b['label'], b['confidence'], b['box_2d']) for b in final_boxes ]}", flush=True)
 
     # 5. Formulate natural Indonesian spoken text response
     speech_text = format_detected_speech(detected_notes)

@@ -147,8 +147,6 @@ export default function App() {
 
       if (hasDetections) {
         consecutiveEmptyRef.current = 0;
-        // Continuously update bounding boxes so overlay tracks banknote movement
-        setBoundingBoxes(detectedBoxes);
 
         // Compute current detection signature
         const currentSig = [...detectedList].sort().join(',');
@@ -159,10 +157,14 @@ export default function App() {
           consecutiveMatchCountRef.current = 1;
         }
 
-        // Immediately accept valid banknote detections verified by backend
-        const isConfirmed = true;
+        // Detection is confirmed if stable across 2 consecutive frames OR genuine high confidence (>= 0.88)
+        const maxConf = Math.max(...detectedBoxes.map((b) => b.confidence || 0), 0);
+        const isConfirmed = consecutiveMatchCountRef.current >= 2 || maxConf >= 0.88;
 
         if (isConfirmed) {
+          // Continuously update bounding boxes so overlay tracks banknote movement
+          setBoundingBoxes(detectedBoxes);
+
           const now = Date.now();
           const isSameAsLast = currentSig === lastAnnouncedSignatureRef.current;
           const isWithinLockout = now - lastAnnouncedTimeRef.current < 5000; // 5s lockout for same note
