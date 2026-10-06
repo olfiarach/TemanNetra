@@ -44,15 +44,29 @@ export function speak(text) {
 }
 
 let player; // one reused element: once unlocked by a gesture, iOS keeps allowing playback
+const ttsUrls = new Map(); // text -> Promise<objectURL>; phrases are few and fixed, so never evicted
+
+function ttsUrl(text) {
+  if (!ttsUrls.has(text)) {
+    const p = fetch(`/tts?text=${encodeURIComponent(text)}`, { signal: AbortSignal.timeout(4000) })
+      .then((res) => { if (!res.ok) throw new Error('tts-unavailable'); return res.blob(); })
+      .then((blob) => URL.createObjectURL(blob));
+    p.catch(() => ttsUrls.delete(text)); // retry on next use
+    ttsUrls.set(text, p);
+  }
+  return ttsUrls.get(text);
+}
+
+// Fetch audio ahead of time so announcements play instantly.
+export const preloadSpeech = (texts) => texts.forEach((t) => ttsUrl(t).catch(() => {}));
+
 async function playRemote(text, token) {
-  const res = await fetch(`/tts?text=${encodeURIComponent(text)}`, { signal: AbortSignal.timeout(4000) });
-  if (!res.ok) throw new Error('tts-unavailable');
-  const url = URL.createObjectURL(await res.blob());
-  if (token !== speechToken) return URL.revokeObjectURL(url), 'interrupted';
+  const url = await ttsUrl(text);
+  if (token !== speechToken) return 'interrupted';
   player ??= new globalThis.Audio();
   player.src = url;
   return new Promise((resolve, reject) => {
-    const end = (fn) => { URL.revokeObjectURL(url); if (token === speechToken) speaking = false; fn(); };
+    const end = (fn) => { if (token === speechToken) speaking = false; fn(); };
     player.onplaying = () => { if (token === speechToken) speaking = true; };
     player.onended = () => end(() => resolve(token === speechToken ? 'done' : 'interrupted'));
     player.onerror = () => end(() => reject(new Error('audio-error')));

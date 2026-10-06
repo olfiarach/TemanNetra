@@ -3,8 +3,8 @@ import { Volume2, Play, Pause, Banknote, Headphones, CheckCircle2, AlertTriangle
 import ScannerView, { CAMERA_MESSAGES } from './components/ScannerView';
 import StatusBanner from './components/StatusBanner';
 import WalletSummary from './components/WalletSummary';
-import { speak, isSpeaking, playChime, triggerHaptic } from './utils/soundEffects';
-import { NOMINAL_VALUES, speechFor, initialConfirmation, stepConfirmation, guidanceFor } from './utils/scanLogic';
+import { speak, isSpeaking, playChime, triggerHaptic, preloadSpeech } from './utils/soundEffects';
+import { NOMINAL_VALUES, GUIDANCE, speechFor, initialConfirmation, stepConfirmation, guidanceFor } from './utils/scanLogic';
 
 // Relative URLs: the UI and API share one origin (Vite proxy in dev, reverse proxy in deployment).
 const MIN_FRAME_GAP_MS = 150; // ponytail: unmeasured floor between frames; raise if the server queues up
@@ -50,6 +50,13 @@ export default function App() {
   useEffect(() => {
     if (!canScan) setIsScanning(false);
   }, [canScan]);
+
+  // Fetch every fixed phrase up front so announcements play without a TTS round trip
+  useEffect(() => {
+    if (serverStatus === 'ready') {
+      preloadSpeech([...Object.keys(NOMINAL_VALUES).map(speechFor), ...Object.values(GUIDANCE), UNCERTAIN_PROMPT]);
+    }
+  }, [serverStatus]);
 
   // Health check (also reports model readiness)
   useEffect(() => {
