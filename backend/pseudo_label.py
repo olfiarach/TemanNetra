@@ -16,8 +16,8 @@ from PIL import Image
 from ultralytics import YOLO
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE_DIR / "backend"))
-from main import IMGSZ  # noqa: E402
+sys.path.insert(0, str(BASE_DIR))
+from backend.main import IMGSZ  # noqa: E402
 
 MIN_CONF = 0.25  # box quality only; class is taken from the folder
 

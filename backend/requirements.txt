@@ -1,9 +1,5 @@
-fastapi
-uvicorn
-watchfiles
 ultralytics
 torch
 torchvision
 pillow
-python-multipart
 gTTS

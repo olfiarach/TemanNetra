@@ -13,9 +13,9 @@ from pathlib import Path
 from PIL import Image
 from ultralytics import YOLO
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from main import IMGSZ  # noqa: E402
-from utils import build_class_map  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from backend.main import IMGSZ  # noqa: E402
+from backend.utils import build_class_map  # noqa: E402
 
 GRID = [round(0.30 + 0.05 * i, 2) for i in range(14)]  # 0.30 .. 0.95
 

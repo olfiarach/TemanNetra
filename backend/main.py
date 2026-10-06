@@ -1,45 +1,17 @@
-import io
 import json
-import os
-import time
-from collections import defaultdict, deque
-from functools import lru_cache
-import sys
-from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import Response
-from fastapi.staticfiles import StaticFiles
-from gtts import gTTS
-from PIL import Image, UnidentifiedImageError
 
-# Ensure both project root and backend directory are in sys.path
-BACKEND_DIR = Path(__file__).resolve().parent
-BASE_DIR = BACKEND_DIR.parent
-for p in [str(BASE_DIR), str(BACKEND_DIR)]:
-    if p not in sys.path:
-        sys.path.insert(0, p)
+from PIL import Image
 
-try:
-    from backend.utils import (
-        build_class_map,
-        format_detected_speech,
-        is_valid_banknote_geometry,
-        is_valid_banknote_color,
-        deduplicate_boxes,
-    )
-except ImportError:
-    from utils import (
-        build_class_map,
-        format_detected_speech,
-        is_valid_banknote_geometry,
-        is_valid_banknote_color,
-        deduplicate_boxes,
-    )
+from backend.utils import (
+    build_class_map,
+    deduplicate_boxes,
+    is_valid_banknote_color,
+    is_valid_banknote_geometry,
+)
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = BASE_DIR / "models" / "best.pt"
-MAX_UPLOAD_BYTES = 5 * 1024 * 1024
-MAX_IMAGE_PIXELS = 25_000_000  # ~25 MP; covers full-resolution phone photos
 
 # Model readiness: MODEL and CLASS_MAP are set only when best.pt loads AND its class
 # names map exactly onto the seven denominations. Otherwise MODEL_ERROR says why.
@@ -76,83 +48,12 @@ def load_model(path: Path = MODEL_PATH) -> None:
         print(f"Model unavailable: {MODEL_ERROR}", flush=True)
 
 
-@asynccontextmanager
-async def lifespan(_app):
-    load_model()
-    yield
+def predict(image: Image.Image) -> dict:
+    """Detect banknotes in a PIL image; the reference the browser detector is checked against."""
+    image = image.convert("RGB")
+    img_w, img_h = image.size
 
-
-app = FastAPI(title="TemanNetra AI API", lifespan=lifespan)
-# No CORS middleware: the UI reaches the API same-origin (Vite proxy / reverse proxy).
-
-
-@app.get("/health")
-def health():
-    return {
-        "status": "ready" if MODEL is not None else "model_unavailable",
-        "model_ready": MODEL is not None,
-        "reason": MODEL_ERROR,
-    }
-
-
-@lru_cache(maxsize=256)
-def _tts_mp3(text: str) -> bytes:
-    buf = io.BytesIO()
-    gTTS(text=text, lang="id").write_to_fp(buf)
-    return buf.getvalue()
-
-
-@app.get("/tts")
-def tts(text: str = Query(..., min_length=1, max_length=200)):
-    """Indonesian speech (gTTS) so the accent never depends on device voices."""
-    try:
-        return Response(_tts_mp3(text), media_type="audio/mpeg")
-    except Exception:
-        raise HTTPException(status_code=503, detail="tts-unavailable")  # client falls back to browser voice
-
-
-# ponytail: per-process limiter; counters are not shared across instances/workers
-RATE_LIMIT, RATE_WINDOW_S, MAX_CLIENTS = 30, 10.0, 10_000
-_hits: dict[str, deque] = defaultdict(deque)
-
-
-def _rate_limited(request: Request) -> bool:
-    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[0].strip()
-    now = time.monotonic()
-    if len(_hits) > MAX_CLIENTS:
-        _hits.clear()  # bounded memory; crude but fail-safe
-    q = _hits[ip]
-    while q and now - q[0] > RATE_WINDOW_S:
-        q.popleft()
-    if len(q) >= RATE_LIMIT:
-        return True
-    q.append(now)
-    return False
-
-
-@app.post("/predict")
-async def predict_rupiah(request: Request, file: UploadFile = File(...)):
-    if _rate_limited(request):
-        raise HTTPException(429, "too many requests")
-    if MODEL is None:
-        raise HTTPException(503, f"model unavailable: {MODEL_ERROR}")
-
-    # 1. Read input image with bounded size and dimensions
-    contents = await file.read(MAX_UPLOAD_BYTES + 1)
-    if len(contents) > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, "image too large")
-    try:
-        image = Image.open(io.BytesIO(contents))
-        img_w, img_h = image.size
-        if img_w * img_h > MAX_IMAGE_PIXELS:
-            raise HTTPException(413, "image dimensions too large")
-        image = image.convert("RGB")
-    except HTTPException:
-        raise
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
-        raise HTTPException(400, "invalid image")
-
-    # 2. Perform object detection.
+    # Perform object detection.
     # ponytail: conf/iou are unmeasured defaults; tune on a held-out set (see README).
     results = MODEL(image, device=DEVICE, imgsz=IMGSZ, conf=0.45, iou=0.45, agnostic_nms=False, verbose=False)[0]
 
@@ -167,11 +68,11 @@ async def predict_rupiah(request: Request, file: UploadFile = File(...)):
             continue
         xyxy = [float(c) for c in box.xyxy[0].tolist()]
 
-        # 3. Geometric and size validation
+        # Geometric and size validation
         if not is_valid_banknote_geometry(xyxy, img_w, img_h):
             continue
 
-        # 4. Color validation (reject monochrome backgrounds)
+        # Color validation (reject monochrome backgrounds)
         crop_box = [max(0, int(xyxy[0])), max(0, int(xyxy[1])), min(img_w, int(xyxy[2])), min(img_h, int(xyxy[3]))]
         if crop_box[2] > crop_box[0] and crop_box[3] > crop_box[1]:
             if not is_valid_banknote_color(image.crop(crop_box)):
@@ -185,29 +86,12 @@ async def predict_rupiah(request: Request, file: UploadFile = File(...)):
             "box_normalized": [round(c, 4) for c in xyxyn],
         })
 
-    # 5. Spatial deduplication
-    final_boxes = deduplicate_boxes(candidate_boxes, iou_threshold=0.45, containment_threshold=0.70)
+    # Spatial deduplication
+    final_boxes = deduplicate_boxes(candidate_boxes)
     detected_notes = [b["label"] for b in final_boxes]
 
     return {
-        "text": format_detected_speech(detected_notes),
         "detections": detected_notes,
         "boxes": final_boxes,
         "image_size": {"width": img_w, "height": img_h},
     }
-
-# Production: serve the built UI same-origin. Mounted last so API routes win.
-DIST_DIR = BASE_DIR / "frontend" / "dist"
-if DIST_DIR.is_dir():
-    app.mount("/", StaticFiles(directory=DIST_DIR, html=True), name="web")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "main:app",
-        host=os.environ.get("HOST", "127.0.0.1"),
-        port=int(os.environ.get("PORT", 8000)),
-        reload=True,
-        app_dir=str(BACKEND_DIR),
-        reload_dirs=[str(BACKEND_DIR)],
-    )

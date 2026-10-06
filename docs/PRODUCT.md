@@ -24,7 +24,7 @@ It announces a note only after 3 consecutive matching single-note frames. Multip
 ## Operating Context
 - Phone held in one hand and the note in the other, at shops and markets, in varied and often poor light.
 - Frames are processed continuously while scanning. Fixed phrases play pre-generated Indonesian clips; other speech uses the browser's `SpeechSynthesis`. Optional vibration.
-- Static React/Vite app on GitHub Pages; YOLOv8n runs in the browser (onnxruntime-web). Frames never leave the phone. The FastAPI backend is a development/reference tool only.
+- Static React/Vite app on GitHub Pages; YOLOv8n runs in the browser (onnxruntime-web). Frames never leave the phone. The Python backend is a development/reference tool only.
 
 ## Capabilities and Constraints
 - Denominations: Rp1.000, 2.000, 5.000, 10.000, 20.000, 50.000, 100.000.

@@ -45,7 +45,7 @@ Camera frames never leave the device. The onnxruntime wasm binaries load from js
 
 - `src/App.jsx` loads the model once at startup and owns the scan loop and detection state.
 - `components/ScannerView.jsx` captures frames.
-- `utils/detector.js` is a port of the backend's `/predict` pipeline.
+- `utils/detector.js` is a port of the backend's `main.predict()` pipeline.
 - `utils/scanLogic.js` holds the confirmation logic.
 - `utils/soundEffects.js` handles speech.
 
@@ -53,15 +53,12 @@ The wallet lives only in React state, so reloading or closing the page clears it
 
 ### Backend (`backend/`): development, training and evaluation only
 
-The deployed page does not use the FastAPI backend. It remains the **reference implementation** that the browser detector is checked against, and the home of the training and evaluation tools.
+The deployed page does not use the backend. It remains the **reference implementation** that the browser detector is checked against, and the home of the training and evaluation tools.
 
-- `main.py` exposes:
-  - `GET /health`
-  - `POST /predict`: multipart `file`, max 5 MB and 25 megapixels. It returns `503` when the model is unavailable, `400` for an invalid image and `413` for oversized input. It also has a per-process limit of 30 requests per 10 s for each client IP, which returns `429`.
-  - It also serves `frontend/dist` when that folder exists.
+- `main.py` has `load_model()` and `predict(image)`, the YOLO inference pipeline (no server).
 - `utils.py` holds the label aliases, `build_class_map`, the geometry and colour checks, and duplicate suppression.
 - `export_web.py` builds the browser assets: the ONNX model, `meta.json` and the speech clips.
-- `web_parity.py` checks the JS detector against `/predict`.
+- `web_parity.py` checks the JS detector against `main.predict()`.
 - `train.py` and `evaluate.py` train a model and run the held-out safety gate.
 
 ## Model
@@ -98,7 +95,7 @@ npm run dev        # http://localhost:5173
 
 The model and speech clips are already in `frontend/public/`. No backend is needed.
 
-### Backend (reference API, export, training)
+### Backend (reference pipeline, export, training)
 
 ```bash
 python3 -m venv venv
@@ -106,9 +103,6 @@ venv/bin/pip install -r backend/requirements.txt onnx onnxruntime onnxslim
 
 curl -fL https://github.com/olfiarach/TemanNetra/releases/download/v.1.1.0/best.pt -o models/best.pt
 echo "a910b6976ac24ed3a7f74b6058060a3280436b2209ff885add4f0a47769311fe  models/best.pt" | shasum -a 256 -c -
-
-./run_backend.sh                         # API at http://127.0.0.1:8000
-curl http://127.0.0.1:8000/health
 ```
 
 PyTorch and Ultralytics may need a platform-specific install. Follow their own guidance if the generic install doesn't give you a usable build.
@@ -138,23 +132,10 @@ Rollback: re-run the workflow on an earlier commit, or revert the commit.
 
 Design notes: `docs/GITHUB_PAGES_DEPLOYMENT_DESIGN.md`.
 
-## Backend API (reference)
-
-### `GET /health`
-
-```json
-{"status": "ready", "model_ready": true, "reason": ""}
-```
-
-### `POST /predict`
-
-```bash
-curl -F "file=@models/test_detected_100k.jpg" http://127.0.0.1:8000/predict
-```
+## `predict()` result shape
 
 ```json
 {
-  "text": "Terdeteksi satu lembar Seratus Ribu Rupiah.",
   "detections": ["Seratus Ribu"],
   "boxes": [
     {"label": "Seratus Ribu", "confidence": 0.91, "box_2d": [10, 20, 500, 400], "box_normalized": [0.02, 0.04, 0.87, 0.92]}
@@ -185,7 +166,7 @@ Keep the model small. The browser runs it on the phone's CPU through wasm with o
 
 Run in this checkout (2026-10-06):
 
-- `venv/bin/python -m unittest backend.test_main`: 10 tests covering class mapping, readiness, upload bounds and no CORS, using a fake detector.
+- `venv/bin/python -m unittest backend.test_main`: tests for class mapping, `predict()`, box overlap and dedup, using a fake detector.
 - `cd frontend && npm test`: 12 tests covering the confirmation state machine and speech serialization, using a mocked `SpeechSynthesis`.
 - `cd frontend && npm run build`, and a static serve of `dist/` that returns the model, `meta.json` and the speech clips.
 - `backend/web_parity.py`: the JS detector matches the backend pipeline on the same ONNX model for all 3 sample photos, with labels exact and scores and boxes within 0.01.
@@ -211,10 +192,10 @@ Not verified, because it needs real notes, a held-out dataset or the target phon
 .
 ├── .github/workflows/pages.yml   # Build + deploy to GitHub Pages
 ├── backend/
-│   ├── main.py                   # Reference FastAPI API and YOLO inference
+│   ├── main.py                   # Model loading and YOLO inference (`predict`)
 │   ├── utils.py                  # Labels, validation, box filtering
 │   ├── export_web.py             # .pt -> ONNX + meta.json + speech clips
-│   ├── web_parity.py             # JS detector vs /predict check
+│   ├── web_parity.py             # JS detector vs predict() check
 │   ├── train.py / evaluate.py    # Training and held-out safety gate
 │   ├── test_main.py
 │   └── requirements.txt
@@ -228,7 +209,5 @@ Not verified, because it needs real notes, a held-out dataset or the target phon
 │   ├── thresholds.json           # Per-class confidence thresholds
 │   ├── yolov8n.pt                # Generic COCO base (not a banknote detector)
 │   └── test_detected_*.jpg       # Sample images
-├── docs/
-├── Dockerfile                    # Optional: container with backend + built UI (not used by the Pages deploy)
-└── run_backend.sh
+└── docs/
 ```

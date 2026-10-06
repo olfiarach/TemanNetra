@@ -82,7 +82,7 @@ export function deduplicate(boxes) {
 }
 
 /**
- * YOLOv8 output [1, 4+nc, n] -> validated boxes in the backend's /predict shape.
+ * YOLOv8 output [1, 4+nc, n] -> validated boxes in the backend predict() shape.
  * `image` is the RGBA frame that was letterboxed (used for geometry and colour checks).
  */
 export function postprocess(out, n, nc, { r, left, top }, image, meta) {

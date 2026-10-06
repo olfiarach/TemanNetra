@@ -21,7 +21,7 @@ Phone browser  --HTTPS-->  GitHub Pages (static: HTML/JS, model/best.onnx, tts/*
 | Piece | Where | Notes |
 |---|---|---|
 | Model export | `backend/export_web.py` | Refuses to run unless `best.pt` matches the release checksum. Exports ONNX (opset 17, 416, static) and writes `meta.json` (labels, thresholds) plus the gTTS clips. |
-| Detector | `frontend/src/utils/detector.js` | Ports `/predict`: letterbox, per-class NMS (conf 0.45, IoU 0.45), per-class thresholds, geometry check, saturation check (36 or more), dedup. |
+| Detector | `frontend/src/utils/detector.js` | Ports `main.predict()`: letterbox, per-class NMS (conf 0.45, IoU 0.45), per-class thresholds, geometry check, saturation check (36 or more), dedup. |
 | Parity check | `backend/web_parity.py` + `frontend/scripts/parity.mjs` | Runs the backend pipeline and the JS pipeline on the same ONNX and sample frames. Labels must match, and confidence and boxes must agree within 0.01. |
 | Speech | `frontend/public/tts/<slug>.mp3` | Fixed phrases are pre-generated. Other phrases use the browser voice. |
 | Deploy | `.github/workflows/pages.yml` | Runs on push to `main` or manually: `npm ci`, test, build, and fails if the model is missing. |

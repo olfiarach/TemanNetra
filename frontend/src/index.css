@@ -109,8 +109,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: 24px;
   background: var(--bg);
   color: var(--ink);
+  transition: opacity 400ms var(--ease);
 }
-.splash-content { width: min(100%, 400px); }
+.splash-content { width: min(100%, 400px); transition: opacity 250ms var(--ease), transform 400ms var(--ease); }
+.splash.is-leaving { opacity: 0; pointer-events: none; }
+.splash.is-leaving .splash-content { opacity: 0; transform: translateY(-8px) scale(0.97); }
 .splash-mark { width: 64px; height: 64px; border-radius: var(--radius); animation: breathe 1.2s linear infinite alternate; }
 .splash h2 { margin: 24px 0 4px; font-size: clamp(2rem, 9vw, 3rem); line-height: 1.1; }
 .splash p { margin: 8px 0; }

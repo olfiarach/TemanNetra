@@ -9,8 +9,8 @@ import torch
 from ultralytics import YOLO
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE_DIR / "backend"))
-from utils import build_class_map  # noqa: E402
+sys.path.insert(0, str(BASE_DIR))
+from backend.utils import build_class_map  # noqa: E402
 
 IMGSZ = 416  # must match main.IMGSZ
 

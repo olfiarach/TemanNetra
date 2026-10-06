@@ -27,6 +27,7 @@ export default function App() {
   const [cameraStatus, setCameraStatus] = useState('starting'); // starting | ready | denied | unavailable | insecure
   const [audioStatus, setAudioStatus] = useState('unknown'); // unknown | ok | unavailable
   const [startupComplete, setStartupComplete] = useState(false);
+  const [splashMounted, setSplashMounted] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [lastResult, setLastResult] = useState(null); // last CONFIRMED note: { label }
   const [hint, setHint] = useState('');
@@ -47,6 +48,12 @@ export default function App() {
         (cameraStatus !== 'starting' && cameraStatus !== 'ready') ||
         (serverStatus !== 'checking' && serverStatus !== 'ready')) setStartupComplete(true);
   }, [cameraStatus, serverStatus]);
+  // Unmount after the CSS exit transition; a timer (not transitionend) also covers reduced motion.
+  useEffect(() => {
+    if (!startupComplete) return;
+    const t = setTimeout(() => setSplashMounted(false), 400);
+    return () => clearTimeout(t);
+  }, [startupComplete]);
 
   useEffect(() => {
     isScanningRef.current = isScanning;
@@ -207,8 +214,8 @@ export default function App() {
 
   return (
     <>
-      {!startupComplete && (
-        <section className="splash" role="status" aria-live="polite">
+      {splashMounted && (
+        <section className={`splash${startupComplete ? ' is-leaving' : ''}`} role="status" aria-live="polite" aria-hidden={startupComplete || undefined}>
           <div className="splash-content">
             <span className="brand-mark splash-mark" aria-hidden="true"><Banknote size={32} /></span>
             <h2>TemanNetra</h2>
