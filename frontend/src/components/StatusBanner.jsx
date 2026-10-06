@@ -9,7 +9,7 @@ export default function StatusBanner({ status }) {
   const Icon = ICONS[status.tone] || Eye;
   return (
     <div className="status-banner" role="status">
-      <div className={`state-badge ${status.tone}`}>
+      <div key={status.text} className={`state-badge ${status.tone}`}>
         <Icon size={26} aria-hidden="true" />
         <span>{status.text}</span>
       </div>

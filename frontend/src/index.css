@@ -37,7 +37,8 @@
   --gutter: 16px;
   --radius: 20px;          /* one radius for every surface and control */
   --tap: 56px;
-  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);      /* ease-out: enter/exit, press */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1); /* on-screen movement */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -97,7 +98,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 
 /* Startup waits for the camera and model, not a fixed timer. */
-.app-container { transition: opacity 220ms var(--ease); }
+.app-container { transition: opacity 200ms var(--ease); }
 .app-container[inert] { opacity: 0; }
 .splash {
   position: fixed;
@@ -192,7 +193,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 @keyframes scanSweep { from { transform: translateY(0); } to { transform: translateY(calc(100cqh)); } }
 
-.target-guide { position: absolute; inset: 14%; pointer-events: none; transition: opacity 0.2s; }
+.target-guide { position: absolute; inset: 14%; pointer-events: none; transition: opacity 200ms var(--ease); }
 .target-guide.boxes-active { opacity: 0; }
 .guide-corner { position: absolute; width: 32px; height: 32px; border: 0 solid #fff; filter: drop-shadow(0 0 2px rgb(0 0 0 / .7)); }
 .corner-tl { top: 0; left: 0; border-top-width: 4px; border-left-width: 4px; border-top-left-radius: 12px; }
@@ -254,15 +255,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* A new confirmed note lands with a short spring: state-change feedback, not decoration. */
 @media (prefers-reduced-motion: no-preference) {
-  .result-amount:not(.is-empty), .result-words { animation: land 0.5s var(--ease); }
+  .result-amount:not(.is-empty), .result-words { animation: land 280ms var(--ease); }
 }
-@keyframes land { from { opacity: 0; transform: translateY(12px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes land { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } }
 
 /* ---------- Status ---------- */
 .status-banner { margin: 0; }
 .state-badge { display: flex; align-items: flex-start; gap: 10px; font-size: var(--fs-base); font-weight: 700; color: var(--ink); }
 .state-badge svg { flex: none; margin-top: 2px; }
 .state-badge.error { color: var(--bad); }
+/* StatusBanner remounts the badge per message (key), so each state change fades in. */
+.state-badge { animation: status-in 200ms var(--ease) both; }
+@keyframes status-in { from { opacity: 0; transform: translateY(4px); } }
 
 /* ---------- Buttons ---------- */
 .action-btn, .icon-btn {
@@ -278,10 +282,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: var(--ink);
   font-size: var(--fs-lg);
   font-weight: 700;
-  transition: transform 0.2s var(--ease);
+  transition: transform 140ms var(--ease), background-color 140ms ease, color 140ms ease;
 }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
-.action-btn:active, .icon-btn:active { transform: scale(0.98); }
+.action-btn:active, .icon-btn:active { transform: scale(0.97); }
+.action-btn:disabled:active { transform: none; }
 .action-btn:disabled {
   cursor: not-allowed;
   background: transparent;
@@ -322,6 +327,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .wallet-total { font-size: var(--fs-lg); font-weight: 700; }
 .wallet-count { color: var(--ink-2); font-size: var(--fs-sm); }
 .wallet-actions { display: flex; gap: 8px; }
+.wallet-panel[open] .wallet-body { animation: status-in 220ms var(--ease) both; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
