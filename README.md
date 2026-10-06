@@ -136,15 +136,9 @@ Open the printed Vite URL, normally `http://localhost:5173`.
 
 The frontend calls relative `/health` and `/predict`. In development, Vite forwards them to `http://127.0.0.1:8000` (`frontend/vite.config.js`). The same applies to `npm run preview`.
 
-### Deployment topology and phones
+### Deployment: GitHub Pages (browser-only)
 
-- **Verified:** same computer, `http://localhost:5173`. The page loads, the camera is acquired and `/health` and `/predict` work through the proxy. Speech from a real banknote through the camera was not tested.
-- **Not verified:** phone use. The dev server now listens on localhost only. Browsers require a secure context for the camera, so a plain `http://<LAN-IP>:5173` URL is not expected to work. A phone needs an HTTPS origin that serves the built frontend and forwards `/health` and `/predict` to the local FastAPI process (for example through a reverse proxy). That setup is not provided or tested here.
-- Do not expose the API publicly without the Render setup below: it has no authentication; `/predict` has only a per-process rate limit (30 requests / 10 s per client IP).
-
-### Render free-tier deployment
-
-One Docker Web Service (root `Dockerfile`) serves the built UI and the API from one HTTPS origin. Design: `docs/RENDER_FREE_TIER_DEPLOYMENT_DESIGN.md`.
+The public demo has no server. The browser downloads the model once (about 12 MB, then cached) and runs detection on the phone with `onnxruntime-web`. Camera frames never leave the device. Design: `docs/GITHUB_PAGES_DEPLOYMENT_DESIGN.md`.
 
 | Model artifact | Value |
 |---|---|
@@ -152,10 +146,21 @@ One Docker Web Service (root `Dockerfile`) serves the built UI and the API from 
 | SHA-256 | `25d4a14f575b514c392da83698787cad5806b55df4da008eaa3838a493133a91` |
 | Classes | `1000`, `2000`, `5000`, `10000`, `20000`, `50000`, `100000` |
 | Date | 2026-10-06 |
+| Web export | `frontend/public/model/best.onnx` + `meta.json` (labels, per-class thresholds) |
 
-Render settings: Runtime **Docker**, Instance **Free**, Health Check Path `/health`, environment variables `MODEL_URL` and `MODEL_SHA256` (values above). The build fails if either is missing or the checksum does not match.
+Rebuild the web assets after changing the model, thresholds, or spoken phrases, then check them against the Python pipeline:
 
-The free service sleeps after 15 minutes idle; the first request wakes it (about a minute) and the UI shows "Server sedang memulai". Experimental demo only: not for verifying banknotes.
+```bash
+venv/bin/python backend/export_web.py    # ONNX + meta.json + gTTS clips in frontend/public/
+venv/bin/python backend/web_parity.py    # JS detector vs FastAPI /predict on the sample images
+```
+
+Deploy: on GitHub, go to **Settings → Pages → Source: GitHub Actions**, then push to `main` or `revamp/improvement` (allow that branch under **Settings → Environments → github-pages**), or run the **Deploy to GitHub Pages** workflow manually). The site is published at `https://olfiarach.github.io/TemanNetra/`.
+
+- Detection speed depends on the phone, and the first visit needs a network connection. Neither has been measured on real devices yet.
+- Fixed phrases play pre-generated Indonesian clips (`frontend/public/tts/`). Anything else, such as the wallet total, uses the phone's own voice.
+- The FastAPI backend (`/predict`, `Dockerfile`) remains for local development, training and evaluation. The deployed page does not use it.
+- Experimental demo only: not for verifying banknotes.
 
 ## API
 

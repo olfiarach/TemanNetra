@@ -37,7 +37,7 @@ export function speak(text) {
   globalThis.speechSynthesis?.cancel?.();
   player?.pause();
   if (typeof globalThis.Audio === 'undefined') return speakBrowser(text, token);
-  // Indonesian gTTS from the backend; browser voice only if that fails
+  // Pre-generated Indonesian gTTS clip; browser voice for other phrases or if that fails
   return playRemote(text, token).catch((err) =>
     token === speechToken ? speakBrowser(text, token) : 'interrupted'
   );
@@ -46,12 +46,16 @@ export function speak(text) {
 let player; // one reused element: once unlocked by a gesture, iOS keeps allowing playback
 const ttsUrls = new Map(); // text -> Promise<objectURL>; phrases are few and fixed, so never evicted
 
+// Must match slug() in backend/export_web.py, which pre-generates these files.
+export const ttsSlug = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const TTS_BASE = `${import.meta.env?.BASE_URL ?? '/'}tts/`;
+
 function ttsUrl(text) {
   if (!ttsUrls.has(text)) {
-    const p = fetch(`/tts?text=${encodeURIComponent(text)}`, { signal: AbortSignal.timeout(4000) })
+    const p = fetch(`${TTS_BASE}${ttsSlug(text)}.mp3`, { signal: AbortSignal.timeout(4000) })
       .then((res) => { if (!res.ok) throw new Error('tts-unavailable'); return res.blob(); })
       .then((blob) => URL.createObjectURL(blob));
-    p.catch(() => ttsUrls.delete(text)); // retry on next use
+    p.catch(() => ttsUrls.delete(text)); // retry on next use (a missing clip just 404s again)
     ttsUrls.set(text, p);
   }
   return ttsUrls.get(text);

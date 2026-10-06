@@ -115,36 +115,22 @@ const ScannerView = forwardRef(({ isScanning, isDetected, boxes = [], onCameraSt
 
   // Expose captureFrame method to parent App
   useImperativeHandle(ref, () => ({
-    captureFrameBlob: () => {
-      return new Promise((resolve) => {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        if (!video || !canvas || !streamActive || video.readyState !== 4) {
-          resolve(null);
-          return;
-        }
+    // RGBA pixels at most 416 px on the long side (the model's input size)
+    captureFrame: () => {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (!video || !canvas || !streamActive || video.readyState !== 4) return null;
 
-        // ponytail: 416 matches the model's imgsz; boxes are normalized so overlay is unaffected
-        const srcW = video.videoWidth || 640;
-        const srcH = video.videoHeight || 480;
-        const scale = Math.min(1, 416 / Math.max(srcW, srcH));
-        const width = Math.round(srcW * scale);
-        const height = Math.round(srcH * scale);
+      // ponytail: 416 matches the model's imgsz; boxes are normalized so overlay is unaffected
+      const srcW = video.videoWidth || 640;
+      const srcH = video.videoHeight || 480;
+      const scale = Math.min(1, 416 / Math.max(srcW, srcH));
+      canvas.width = Math.round(srcW * scale);
+      canvas.height = Math.round(srcH * scale);
 
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => {
-            resolve(blob);
-          },
-          'image/jpeg',
-          0.7
-        );
-      });
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return ctx.getImageData(0, 0, canvas.width, canvas.height);
     },
   }));
 

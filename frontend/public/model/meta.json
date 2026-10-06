@@ -1,0 +1,22 @@
+{
+  "imgsz": 416,
+  "source_sha256": "25d4a14f575b514c392da83698787cad5806b55df4da008eaa3838a493133a91",
+  "labels": [
+    "Satu Ribu",
+    "Sepuluh Ribu",
+    "Seratus Ribu",
+    "Dua Ribu",
+    "Dua Puluh Ribu",
+    "Lima Ribu",
+    "Lima Puluh Ribu"
+  ],
+  "thresholds": [
+    0.6,
+    0.8,
+    0.7,
+    0.45,
+    0.45,
+    0.65,
+    0.75
+  ]
+}
