@@ -41,19 +41,24 @@ MAX_IMAGE_PIXELS = 25_000_000  # ~25 MP; covers full-resolution phone photos
 MODEL = None
 CLASS_MAP = {}
 MODEL_ERROR = "Model has not been loaded"
+DEVICE = "cpu"
+IMGSZ = 416  # ponytail: matches the frontend frame size; retrain/benchmark before changing
 
 
 def load_model(path: Path = MODEL_PATH) -> None:
-    global MODEL, CLASS_MAP, MODEL_ERROR
+    global MODEL, CLASS_MAP, MODEL_ERROR, DEVICE
     MODEL, CLASS_MAP = None, {}
     if not path.exists():
         MODEL_ERROR = f"{path.name} not found; the generic YOLO fallback is not a banknote detector"
         return
     try:
+        import torch
         from ultralytics import YOLO
 
+        DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         model = YOLO(str(path))
         CLASS_MAP = build_class_map(model.names)
+        model(Image.new("RGB", (IMGSZ, IMGSZ)), device=DEVICE, imgsz=IMGSZ, verbose=False)  # warm-up
         MODEL = model
         MODEL_ERROR = ""
         print(f"Loaded banknote model {path.name} ({path.stat().st_size / 1e6:.1f} MB)", flush=True)
@@ -119,7 +124,7 @@ async def predict_rupiah(file: UploadFile = File(...)):
 
     # 2. Perform object detection.
     # ponytail: conf/iou are unmeasured defaults; tune on a held-out set (see README).
-    results = MODEL(image, conf=0.45, iou=0.45, agnostic_nms=False, verbose=False)[0]
+    results = MODEL(image, device=DEVICE, imgsz=IMGSZ, conf=0.45, iou=0.45, agnostic_nms=False, verbose=False)[0]
 
     candidate_boxes = []
     for box in results.boxes:

@@ -7,7 +7,8 @@ import { speak, isSpeaking, playChime, triggerHaptic } from './utils/soundEffect
 import { NOMINAL_VALUES, speechFor, initialConfirmation, stepConfirmation, guidanceFor } from './utils/scanLogic';
 
 // Relative URLs: the UI and API share one origin (Vite proxy in dev, reverse proxy in deployment).
-const FRAME_INTERVAL_MS = 750;
+const MIN_FRAME_GAP_MS = 150; // ponytail: unmeasured floor between frames; raise if the server queues up
+const ERROR_GAP_MS = 750; // backoff after a failed frame
 const REQUEST_TIMEOUT_MS = 8000;
 const GUIDANCE_GAP_MS = 3000; // min gap between spoken framing hints
 const UNCERTAIN_PROMPT = 'Nominal belum pasti, coba lagi';
@@ -36,6 +37,7 @@ export default function App() {
   const isScanningRef = useRef(false);
   const confirmationRef = useRef(initialConfirmation());
   const lastGuidanceRef = useRef({ text: '', at: 0 });
+  const gapRef = useRef(MIN_FRAME_GAP_MS);
 
   const canScan = cameraStatus === 'ready' && serverStatus === 'ready';
 
@@ -128,6 +130,7 @@ export default function App() {
   const processFrame = useCallback(async () => {
     if (!isScanningRef.current || isProcessingRef.current || !scannerRef.current) return;
     isProcessingRef.current = true;
+    gapRef.current = MIN_FRAME_GAP_MS;
 
     try {
       const blob = await scannerRef.current.captureFrameBlob();
@@ -140,9 +143,11 @@ export default function App() {
       try {
         response = await fetch('/predict', { method: 'POST', body: formData, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
       } catch {
+        gapRef.current = ERROR_GAP_MS;
         setServerStatus('unreachable');
         return;
       }
+      if (!response.ok) gapRef.current = ERROR_GAP_MS;
       if (response.status === 503) {
         setServerStatus('model_unavailable');
         return;
@@ -180,6 +185,7 @@ export default function App() {
         } else if (!tip && boxes.length === 0) setHint('');
       }
     } catch (err) {
+      gapRef.current = ERROR_GAP_MS;
       console.warn('Frame processing error:', err.name);
     } finally {
       isProcessingRef.current = false;
@@ -188,8 +194,17 @@ export default function App() {
 
   useEffect(() => {
     if (!isScanning) return;
-    const interval = setInterval(processFrame, FRAME_INTERVAL_MS);
-    return () => clearInterval(interval);
+    let timer;
+    let stopped = false;
+    const loop = async () => {
+      await processFrame();
+      if (!stopped && isScanningRef.current) timer = setTimeout(loop, gapRef.current);
+    };
+    loop();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
   }, [isScanning, processFrame]);
 
   // One status for the live region. Priority: camera > server > model > paused > audio > scanning.

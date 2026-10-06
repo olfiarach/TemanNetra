@@ -124,8 +124,12 @@ const ScannerView = forwardRef(({ isScanning, isDetected, boxes = [], onCameraSt
           return;
         }
 
-        const width = video.videoWidth || 640;
-        const height = video.videoHeight || 480;
+        // ponytail: 416 matches the model's imgsz; boxes are normalized so overlay is unaffected
+        const srcW = video.videoWidth || 640;
+        const srcH = video.videoHeight || 480;
+        const scale = Math.min(1, 416 / Math.max(srcW, srcH));
+        const width = Math.round(srcW * scale);
+        const height = Math.round(srcH * scale);
 
         canvas.width = width;
         canvas.height = height;
@@ -138,7 +142,7 @@ const ScannerView = forwardRef(({ isScanning, isDetected, boxes = [], onCameraSt
             resolve(blob);
           },
           'image/jpeg',
-          0.85
+          0.7
         );
       });
     },
