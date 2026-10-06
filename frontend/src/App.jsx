@@ -4,20 +4,20 @@ import ScannerView, { CAMERA_MESSAGES } from './components/ScannerView';
 import StatusBanner from './components/StatusBanner';
 import WalletSummary from './components/WalletSummary';
 import { speak, isSpeaking, playChime, triggerHaptic, preloadSpeech } from './utils/soundEffects';
+import { loadDetector, detect } from './utils/detector';
 import { NOMINAL_VALUES, GUIDANCE, speechFor, initialConfirmation, stepConfirmation, guidanceFor } from './utils/scanLogic';
 
-// Relative URLs: the UI and API share one origin (Vite proxy in dev, reverse proxy in deployment).
-const MIN_FRAME_GAP_MS = 150; // ponytail: unmeasured floor between frames; raise if the server queues up
+// Detection runs in the browser (onnxruntime-web); no backend is involved.
+const MIN_FRAME_GAP_MS = 150; // ponytail: unmeasured floor between frames; raise if phones overheat
 const ERROR_GAP_MS = 750; // backoff after a failed frame
-const REQUEST_TIMEOUT_MS = 8000;
 const GUIDANCE_GAP_MS = 3000; // min gap between spoken framing hints
 const UNCERTAIN_PROMPT = 'Nominal belum pasti, coba lagi';
 
 const SERVER_LABELS = {
-  checking: 'Memeriksa server',
-  unreachable: 'Server sedang memulai',
+  checking: 'Memuat model',
+  unreachable: 'Model gagal diunduh',
   model_unavailable: 'Model pengenal uang tidak tersedia',
-  ready: 'Server siap',
+  ready: 'Model siap',
 };
 
 const formatRupiah = (n) => `Rp${n.toLocaleString('id-ID')}`;
@@ -26,6 +26,7 @@ export default function App() {
   const [serverStatus, setServerStatus] = useState('checking'); // checking | unreachable | model_unavailable | ready
   const [cameraStatus, setCameraStatus] = useState('starting'); // starting | ready | denied | unavailable | insecure
   const [audioStatus, setAudioStatus] = useState('unknown'); // unknown | ok | unavailable
+  const [startupComplete, setStartupComplete] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [lastResult, setLastResult] = useState(null); // last CONFIRMED note: { label }
   const [hint, setHint] = useState('');
@@ -40,6 +41,12 @@ export default function App() {
   const gapRef = useRef(MIN_FRAME_GAP_MS);
 
   const canScan = cameraStatus === 'ready' && serverStatus === 'ready';
+  // Keep the camera mounted while loading; an error must expose the existing retry/error UI.
+  useEffect(() => {
+    if ((cameraStatus === 'ready' && serverStatus === 'ready') ||
+        (cameraStatus !== 'starting' && cameraStatus !== 'ready') ||
+        (serverStatus !== 'checking' && serverStatus !== 'ready')) setStartupComplete(true);
+  }, [cameraStatus, serverStatus]);
 
   useEffect(() => {
     isScanningRef.current = isScanning;
@@ -58,22 +65,15 @@ export default function App() {
     }
   }, [serverStatus]);
 
-  // Health check (also reports model readiness)
+  // Download and initialise the model once (cached by the browser afterwards)
   useEffect(() => {
-    async function checkHealth() {
-      if (document.hidden) return; // no polling in background tabs
-      try {
-        const res = await fetch('/health', { signal: AbortSignal.timeout(4000) });
-        if (!res.ok) throw new Error(`health ${res.status}`);
-        const data = await res.json();
-        setServerStatus(data.model_ready ? 'ready' : 'model_unavailable');
-      } catch {
-        setServerStatus('unreachable');
+    loadDetector(import.meta.env.BASE_URL).then(
+      () => setServerStatus('ready'),
+      (err) => {
+        console.warn('Model load failed:', err);
+        setServerStatus(err instanceof TypeError ? 'unreachable' : 'model_unavailable'); // TypeError = network
       }
-    }
-    checkHealth();
-    const timer = setInterval(checkHealth, 5000);
-    return () => clearInterval(timer);
+    );
   }, []);
 
   // Speak and record whether audio actually worked ('interrupted' by newer speech is neutral)
@@ -141,35 +141,10 @@ export default function App() {
     gapRef.current = MIN_FRAME_GAP_MS;
 
     try {
-      const blob = await scannerRef.current.captureFrameBlob();
-      if (!blob) return;
+      const frame = scannerRef.current.captureFrame();
+      if (!frame) return;
 
-      const formData = new FormData();
-      formData.append('file', blob, 'frame.jpg');
-
-      let response;
-      try {
-        response = await fetch('/predict', { method: 'POST', body: formData, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-      } catch {
-        gapRef.current = ERROR_GAP_MS;
-        setServerStatus('unreachable');
-        return;
-      }
-      if (!response.ok) gapRef.current = ERROR_GAP_MS;
-      if (response.status === 503) {
-        setServerStatus('model_unavailable');
-        return;
-      }
-      if (response.status >= 500) {
-        setServerStatus('unreachable');
-        return;
-      }
-      if (!response.ok) {
-        console.warn('Frame rejected:', response.status); // bad frame: skip, keep scanning
-        return;
-      }
-
-      const data = await response.json();
+      const data = { boxes: await detect(frame) };
       if (!isScanningRef.current) return; // paused while the request was in flight
 
       const boxes = (data.boxes || []).filter((box) => NOMINAL_VALUES[box.label]);
@@ -215,12 +190,12 @@ export default function App() {
     };
   }, [isScanning, processFrame]);
 
-  // One status for the live region. Priority: camera > server > model > paused > audio > scanning.
+  // One status for the live region. Priority: camera > model download > model > paused > audio > scanning.
   let status;
   if (CAMERA_MESSAGES[cameraStatus]) status = { tone: 'error', text: CAMERA_MESSAGES[cameraStatus] };
-  else if (serverStatus === 'unreachable') status = { tone: 'error', text: 'Server sedang memulai. Tunggu sebentar lalu coba lagi.' };
+  else if (serverStatus === 'unreachable') status = { tone: 'error', text: 'Model gagal diunduh. Periksa koneksi lalu muat ulang halaman.' };
   else if (serverStatus === 'model_unavailable') status = { tone: 'error', text: 'Model pengenal uang tidak tersedia. Pemindaian dinonaktifkan.' };
-  else if (cameraStatus === 'starting' || serverStatus === 'checking') status = { tone: 'paused', text: 'Menyiapkan kamera dan server' };
+  else if (cameraStatus === 'starting' || serverStatus === 'checking') status = { tone: 'paused', text: 'Menyiapkan kamera dan model' };
   else if (!isScanning) status = { tone: 'paused', text: 'Pemindai dijeda. Tekan Mulai Pindai.' };
   else if (audioStatus === 'unavailable') status = { tone: 'error', text: 'Suara tidak tersedia. Naikkan volume perangkat lalu tekan Uji Suara.' };
   else if (boundingBoxes.length > 0 && !confirmationRef.current.confirmed) status = { tone: 'searching', text: 'Uang terlihat, memastikan nominal…' };
@@ -231,7 +206,18 @@ export default function App() {
   const noteValue = lastResult ? NOMINAL_VALUES[lastResult.label] : null;
 
   return (
-    <div className="app-container">
+    <>
+      {!startupComplete && (
+        <section className="splash" role="status" aria-live="polite">
+          <div className="splash-content">
+            <span className="brand-mark splash-mark" aria-hidden="true"><Banknote size={32} /></span>
+            <h2>TemanNetra</h2>
+            <p>Menyiapkan pemindai</p>
+            <p>{SERVER_LABELS[serverStatus]} · {cameraStatus === 'ready' ? 'Kamera siap' : 'Menyiapkan kamera'}</p>
+          </div>
+        </section>
+      )}
+      <div className="app-container" inert={startupComplete ? undefined : ''}>
       <header className="app-header">
         <h1 className="brand-title">
           <span className="brand-mark" aria-hidden="true"><Banknote size={24} /></span>
@@ -296,6 +282,7 @@ export default function App() {
           <span>Ulangi</span>
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

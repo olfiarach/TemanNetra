@@ -96,6 +96,26 @@ button { font: inherit; color: inherit; cursor: pointer; }
   gap: 14px;
 }
 
+/* Startup waits for the camera and model, not a fixed timer. */
+.app-container { transition: opacity 220ms var(--ease); }
+.app-container[inert] { opacity: 0; }
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.splash-content { width: min(100%, 400px); }
+.splash-mark { width: 64px; height: 64px; border-radius: var(--radius); animation: breathe 1.2s linear infinite alternate; }
+.splash h2 { margin: 24px 0 4px; font-size: clamp(2rem, 9vw, 3rem); line-height: 1.1; }
+.splash p { margin: 8px 0; }
+.splash p:last-child { color: var(--ink-2); font-size: var(--fs-sm); }
+@keyframes breathe { to { opacity: 0.55; } }
+
 /* ---------- Header ---------- */
 .app-header {
   display: flex;
