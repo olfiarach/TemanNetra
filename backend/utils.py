@@ -1,8 +1,5 @@
-import io
-import base64
 from collections import Counter
-from typing import List, Dict, Union, Optional
-from gtts import gTTS
+from typing import List, Dict
 
 # Canonical Indonesian spoken names for banknotes
 VALID_BANKNOTE_NAMES = {
@@ -57,71 +54,21 @@ BANKNOTE_ALIAS_MAP: Dict[str, str] = {
     "seratus ribu": "Seratus Ribu",
 }
 
-# Standard 0-6 index mapping for custom banknote models
-INDEX_TO_BANKNOTE: Dict[int, str] = {
-    0: "Satu Ribu",
-    1: "Dua Ribu",
-    2: "Lima Ribu",
-    3: "Sepuluh Ribu",
-    4: "Dua Puluh Ribu",
-    5: "Lima Puluh Ribu",
-    6: "Seratus Ribu",
-}
-
-# Alphabetical 0-6 index mapping (e.g. ['1000', '10000', '100000', '2000', '20000', '5000', '50000'])
-ALPHABETICAL_INDEX_TO_BANKNOTE: Dict[int, str] = {
-    0: "Satu Ribu",
-    1: "Sepuluh Ribu",
-    2: "Seratus Ribu",
-    3: "Dua Ribu",
-    4: "Dua Puluh Ribu",
-    5: "Lima Ribu",
-    6: "Lima Puluh Ribu",
-}
-
-# Keep CLASS_NAMES for backward compatibility
-CLASS_NAMES = BANKNOTE_ALIAS_MAP
-
-
-def resolve_label_name(cls_id: int, model_names: dict) -> Optional[str]:
+def build_class_map(model_names) -> Dict[int, str]:
     """
-    Resolve a class ID or name to its Indonesian spoken denomination.
-    Returns None if the detected object is NOT a banknote (e.g. face, person, or COCO object).
+    Map model class ids to canonical denominations by NAME only (via BANKNOTE_ALIAS_MAP).
+    Raises ValueError unless the model's classes are exactly the seven supported
+    denominations; class order is never guessed.
     """
-    if not model_names:
-        return None
-
-    raw_name = model_names.get(cls_id)
-    if raw_name is None:
-        return None
-
-    str_name = str(raw_name).strip()
-    lower_name = str_name.lower()
-
-    # 1. Strictly ignore person, face, head, or human body parts
-    if any(k in lower_name for k in ["person", "face", "head", "human"]):
-        return None
-
-    # 2. Check if raw_name directly matches any known banknote alias
-    if lower_name in BANKNOTE_ALIAS_MAP:
-        return BANKNOTE_ALIAS_MAP[lower_name]
-
-    if str_name in VALID_BANKNOTE_NAMES:
-        return str_name
-
-    # 3. If model_names is a COCO model (80 classes, class 0 is 'person'), reject all non-banknotes
-    is_coco_model = len(model_names) == 80 or model_names.get(0) == "person"
-    if is_coco_model:
-        return None
-
-    # 4. Fallback for custom banknote-only model (<= 7 classes)
-    if len(model_names) <= 7:
-        if cls_id in ALPHABETICAL_INDEX_TO_BANKNOTE:
-            return ALPHABETICAL_INDEX_TO_BANKNOTE[cls_id]
-        if cls_id in INDEX_TO_BANKNOTE:
-            return INDEX_TO_BANKNOTE[cls_id]
-
-    return None
+    mapping: Dict[int, str] = {}
+    for cls_id, raw_name in dict(model_names or {}).items():
+        label = BANKNOTE_ALIAS_MAP.get(str(raw_name).strip().lower())
+        if label is None:
+            raise ValueError(f"Unsupported model class name: {raw_name!r}")
+        mapping[int(cls_id)] = label
+    if len(mapping) != len(VALID_BANKNOTE_NAMES) or set(mapping.values()) != VALID_BANKNOTE_NAMES:
+        raise ValueError("Model classes must map exactly onto the seven supported denominations")
+    return mapping
 
 
 def compute_iou(b1: List[float], b2: List[float]) -> float:
@@ -148,9 +95,6 @@ def compute_containment(b1: List[float], b2: List[float]) -> float:
     a2 = max(0.0, b2[2] - b2[0]) * max(0.0, b2[3] - b2[1])
     min_area = min(a1, a2)
     return inter / min_area if min_area > 0 else 0.0
-
-
-AUDIO_CACHE: Dict[str, str] = {}
 
 
 def is_valid_banknote_geometry(xyxy: List[float], img_w: int, img_h: int) -> bool:
@@ -270,26 +214,3 @@ def format_detected_speech(detected_notes: List[str]) -> str:
         phrases.append(f"{prefix} {note}")
 
     return f"Terdeteksi {' dan '.join(phrases)} Rupiah."
-
-
-def generate_audio_base64(text: str, lang: str = "id") -> Optional[str]:
-    """
-    Generate audio via gTTS and return base64 encoded string.
-    Uses memory cache and handles rate limiting safely so API never fails.
-    """
-    if not text:
-        return None
-
-    if text in AUDIO_CACHE:
-        return AUDIO_CACHE[text]
-
-    try:
-        tts = gTTS(text=text, lang=lang)
-        audio_io = io.BytesIO()
-        tts.write_to_fp(audio_io)
-        b64 = base64.b64encode(audio_io.getvalue()).decode("utf-8")
-        AUDIO_CACHE[text] = b64
-        return b64
-    except Exception as e:
-        # Gracefully fall back to client-side SpeechSynthesis if gTTS is rate-limited or offline
-        return None

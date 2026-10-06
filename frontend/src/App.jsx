@@ -1,353 +1,259 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Eye, Volume2, Play, Pause, DollarSign, Sparkles } from 'lucide-react';
-import ScannerView from './components/ScannerView';
+import { Volume2, Play, Pause, Banknote, Headphones, CheckCircle2, AlertTriangle, Loader } from 'lucide-react';
+import ScannerView, { CAMERA_MESSAGES } from './components/ScannerView';
 import StatusBanner from './components/StatusBanner';
 import WalletSummary from './components/WalletSummary';
-import { playBase64Audio, playChime, triggerHaptic } from './utils/soundEffects';
+import { speak, playChime, triggerHaptic } from './utils/soundEffects';
+import { NOMINAL_VALUES, speechFor, initialConfirmation, stepConfirmation } from './utils/scanLogic';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+// Relative URLs: the UI and API share one origin (Vite proxy in dev, reverse proxy in deployment).
+const FRAME_INTERVAL_MS = 750;
+const REQUEST_TIMEOUT_MS = 8000;
+const UNCERTAIN_PROMPT = 'Nominal belum pasti, coba lagi';
 
-const NOMINAL_VALUES = {
-  'Satu Ribu': 1000,
-  'Dua Ribu': 2000,
-  'Lima Ribu': 5000,
-  'Sepuluh Ribu': 10000,
-  'Dua Puluh Ribu': 20000,
-  'Lima Puluh Ribu': 50000,
-  'Seratus Ribu': 100000,
+const SERVER_LABELS = {
+  checking: 'Memeriksa server',
+  unreachable: 'Server tidak terhubung',
+  model_unavailable: 'Model pengenal uang tidak tersedia',
+  ready: 'Server siap',
 };
 
+const formatRupiah = (n) => `Rp${n.toLocaleString('id-ID')}`;
+
 export default function App() {
-  const [isServerOnline, setIsServerOnline] = useState(false);
-  const [isScanning, setIsScanning] = useState(true);
-  const [scanState, setScanState] = useState('SEARCHING'); // 'SEARCHING' | 'DETECTED' | 'RESETTING'
-  const [lastDetections, setLastDetections] = useState([]);
+  const [serverStatus, setServerStatus] = useState('checking'); // checking | unreachable | model_unavailable | ready
+  const [cameraStatus, setCameraStatus] = useState('starting'); // starting | ready | denied | unavailable | insecure
+  const [audioStatus, setAudioStatus] = useState('unknown'); // unknown | ok | unavailable
+  const [isScanning, setIsScanning] = useState(false);
+  const [lastResult, setLastResult] = useState(null); // last CONFIRMED note: { label }
+  const [hint, setHint] = useState('');
   const [boundingBoxes, setBoundingBoxes] = useState([]);
-  const [transcript, setTranscript] = useState('Arahkan uang Rupiah ke depan kamera');
-  const [lastAudioB64, setLastAudioB64] = useState(null);
   const [walletItems, setWalletItems] = useState([]);
 
   const scannerRef = useRef(null);
   const isProcessingRef = useRef(false);
-  const consecutiveEmptyRef = useRef(0);
-  const consecutiveMatchCountRef = useRef(0);
-  const pendingNotesRef = useRef(null);
-  const lastAnnouncedSignatureRef = useRef(null);
-  const lastAnnouncedTimeRef = useRef(0);
-  const lastWalletNotesRef = useRef([]);
-  const isPlayingAudioRef = useRef(false);
-  const scanStateRef = useRef('SEARCHING');
+  const isScanningRef = useRef(false);
+  const confirmationRef = useRef(initialConfirmation());
 
-  // Keep state ref in sync
+  const canScan = cameraStatus === 'ready' && serverStatus === 'ready';
+
   useEffect(() => {
-    scanStateRef.current = scanState;
-  }, [scanState]);
+    isScanningRef.current = isScanning;
+    if (!isScanning) setBoundingBoxes([]);
+  }, [isScanning]);
 
-  // 1. Health check for FastAPI backend
+  // Pause automatically when scanning cannot work (camera lost, server or model down)
   useEffect(() => {
-    let timer = null;
+    if (!canScan) setIsScanning(false);
+  }, [canScan]);
 
+  // Health check (also reports model readiness)
+  useEffect(() => {
     async function checkHealth() {
       try {
-        const res = await fetch(`${API_BASE_URL}/`, { method: 'GET' });
-        if (res.ok) {
-          setIsServerOnline(true);
-        } else {
-          setIsServerOnline(false);
-        }
+        const res = await fetch('/health', { signal: AbortSignal.timeout(4000) });
+        if (!res.ok) throw new Error(`health ${res.status}`);
+        const data = await res.json();
+        setServerStatus(data.model_ready ? 'ready' : 'model_unavailable');
       } catch {
-        setIsServerOnline(false);
+        setServerStatus('unreachable');
       }
     }
-
     checkHealth();
-    timer = setInterval(checkHealth, 5000);
+    const timer = setInterval(checkHealth, 5000);
     return () => clearInterval(timer);
   }, []);
 
-  // 2. Add detected banknote to wallet tally
-  const addToWallet = (notes) => {
-    const newItems = notes.map((note) => ({
-      id: Date.now() + Math.random(),
-      name: note,
-      value: NOMINAL_VALUES[note] || 0,
-      timestamp: new Date().toLocaleTimeString('id-ID'),
-    }));
+  // Speak and record whether audio actually worked ('interrupted' by newer speech is neutral)
+  const say = useCallback((text) => {
+    speak(text).then(
+      (result) => result === 'done' && setAudioStatus('ok'),
+      () => setAudioStatus('unavailable')
+    );
+  }, []);
 
-    setWalletItems((prev) => [...newItems, ...prev]);
-  };
+  const handleTestAudio = () => say('Tes suara.');
+  const handleRepeat = () => say(lastResult ? speechFor(lastResult.label) : 'Belum ada hasil.');
 
-  // 3. Replay last audio
-  const handleReplayAudio = () => {
-    playChime('click');
-    if (lastAudioB64) {
-      isPlayingAudioRef.current = true;
-      playBase64Audio(lastAudioB64).finally(() => {
-        isPlayingAudioRef.current = false;
-      });
-    } else {
-      speakFallback(transcript);
-    }
-  };
-
-  // Native Indonesian Speech fallback if needed
-  const speakFallback = (text) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'id-ID';
-      utterance.rate = 1.0;
-      utterance.onend = () => {
-        isPlayingAudioRef.current = false;
-      };
-      isPlayingAudioRef.current = true;
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
-  // Speak wallet summary
-  const handleSpeakTotal = (amount, count) => {
-    const text =
-      count === 0
-        ? 'Dompet masih kosong. Belum ada uang yang dipindai.'
-        : `Total uang terkumpul adalah ${amount.toLocaleString('id-ID')} rupiah, terdiri dari ${count} lembar uang.`;
-    speakFallback(text);
-  };
-
-  // 4. Scanner frame processor
-  const processFrame = useCallback(async () => {
-    if (!isScanning || isProcessingRef.current || !scannerRef.current) {
+  const handleToggleScan = () => {
+    if (isScanning) {
+      setIsScanning(false);
+      say('Pemindaian dijeda.');
       return;
     }
+    confirmationRef.current = initialConfirmation();
+    setHint('');
+    setIsScanning(true);
+    // The click is the user gesture that lets the browser start speech
+    say('Pemindaian dimulai. Arahkan satu lembar uang ke kamera.');
+  };
 
+  const handleSpeakTotal = (amount, count) =>
+    say(
+      count === 0
+        ? 'Dompet masih kosong.'
+        : `Total ${amount.toLocaleString('id-ID')} rupiah, ${count} lembar.`
+    );
+
+  const handleEvent = useCallback(
+    (event) => {
+      if (event.type === 'confirmed') {
+        setLastResult({ label: event.label });
+        setHint('');
+        say(speechFor(event.label));
+        triggerHaptic(100);
+        setWalletItems((prev) => [
+          {
+            id: Date.now() + Math.random(),
+            name: event.label,
+            value: NOMINAL_VALUES[event.label],
+            timestamp: new Date().toLocaleTimeString('id-ID'),
+          },
+          ...prev,
+        ]);
+      } else if (event.type === 'cleared') {
+        setHint('');
+        playChime('ready');
+        triggerHaptic(40);
+      } else if (event.type === 'uncertain') {
+        setHint(UNCERTAIN_PROMPT);
+        say(UNCERTAIN_PROMPT);
+      }
+    },
+    [say]
+  );
+
+  const processFrame = useCallback(async () => {
+    if (!isScanningRef.current || isProcessingRef.current || !scannerRef.current) return;
     isProcessingRef.current = true;
 
     try {
       const blob = await scannerRef.current.captureFrameBlob();
-      if (!blob) {
-        isProcessingRef.current = false;
-        return;
-      }
+      if (!blob) return;
 
       const formData = new FormData();
       formData.append('file', blob, 'frame.jpg');
 
-      const response = await fetch(`${API_BASE_URL}/predict`, {
-        method: 'POST',
-        body: formData,
-      });
-
+      let response;
+      try {
+        response = await fetch('/predict', { method: 'POST', body: formData, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      } catch {
+        setServerStatus('unreachable');
+        return;
+      }
+      if (response.status === 503) {
+        setServerStatus('model_unavailable');
+        return;
+      }
+      if (response.status >= 500) {
+        setServerStatus('unreachable');
+        return;
+      }
       if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
+        console.warn('Frame rejected:', response.status); // bad frame: skip, keep scanning
+        return;
       }
 
       const data = await response.json();
-      const detectedList = (data.detections || []).filter((note) => NOMINAL_VALUES[note]);
-      const detectedBoxes = (data.boxes || []).filter((box) => NOMINAL_VALUES[box.label]);
-      const hasDetections = detectedList.length > 0;
+      if (!isScanningRef.current) return; // paused while the request was in flight
 
-      if (hasDetections) {
-        consecutiveEmptyRef.current = 0;
-        // Update bounding boxes immediately so overlay tracks banknote in real-time
-        setBoundingBoxes(detectedBoxes);
+      const boxes = (data.boxes || []).filter((box) => NOMINAL_VALUES[box.label]);
+      setBoundingBoxes(boxes);
 
-        // Compute current detection signature
-        const currentSig = [...detectedList].sort().join(',');
-        if (currentSig === pendingNotesRef.current) {
-          consecutiveMatchCountRef.current += 1;
-        } else {
-          pendingNotesRef.current = currentSig;
-          consecutiveMatchCountRef.current = 1;
-        }
-
-        // Detection is confirmed if stable across 2 consecutive frames OR clear confidence (>= 0.65)
-        const maxConf = Math.max(...detectedBoxes.map((b) => b.confidence || 0), 0);
-        const isConfirmed = consecutiveMatchCountRef.current >= 2 || maxConf >= 0.65;
-
-        if (isConfirmed) {
-          const now = Date.now();
-          const isSameAsLast = currentSig === lastAnnouncedSignatureRef.current;
-          const isWithinLockout = now - lastAnnouncedTimeRef.current < 2500;
-
-          // Announce if new note signature or previous note was cleared or lockout expired
-          if (!isSameAsLast || !isWithinLockout || scanStateRef.current !== 'DETECTED') {
-            lastAnnouncedSignatureRef.current = currentSig;
-            lastAnnouncedTimeRef.current = now;
-
-            setScanState('DETECTED');
-            setLastDetections(detectedList);
-            setTranscript(data.text);
-            setLastAudioB64(data.audio_b64);
-
-            // Audio & haptic cue
-            playChime('detected');
-            triggerHaptic(100);
-
-            // Prevent audio stacking
-            if (data.audio_b64) {
-              isPlayingAudioRef.current = true;
-              playBase64Audio(data.audio_b64).finally(() => {
-                isPlayingAudioRef.current = false;
-              });
-            } else {
-              speakFallback(data.text);
-            }
-
-            // Calculate delta of new notes added to the frame
-            const prevTally = [...lastWalletNotesRef.current];
-            const notesToAdd = [];
-            for (const note of detectedList) {
-              const idx = prevTally.indexOf(note);
-              if (idx !== -1) {
-                prevTally.splice(idx, 1);
-              } else {
-                notesToAdd.push(note);
-              }
-            }
-
-            if (notesToAdd.length > 0) {
-              addToWallet(notesToAdd);
-              lastWalletNotesRef.current = [...detectedList];
-            }
-          }
-        }
-      } else {
-        // No banknote in view
-        consecutiveEmptyRef.current += 1;
-        consecutiveMatchCountRef.current = 0;
-        pendingNotesRef.current = null;
-
-        // Clear bounding boxes and active session tally when absent for 2 cycles (~1.5s)
-        if (consecutiveEmptyRef.current >= 2) {
-          setBoundingBoxes([]);
-          lastWalletNotesRef.current = [];
-        }
-
-        // Reset to SEARCHING state quickly when note is removed
-        if (scanStateRef.current === 'DETECTED' && consecutiveEmptyRef.current >= 2) {
-          lastAnnouncedSignatureRef.current = null;
-          setScanState('RESETTING');
-          playChime('ready');
-          triggerHaptic(40);
-
-          setTimeout(() => {
-            setScanState('SEARCHING');
-            setTranscript('Siap memindai uang berikutnya...');
-          }, 400);
-        }
-      }
+      const { state, event } = stepConfirmation(
+        confirmationRef.current,
+        boxes.map((b) => b.label)
+      );
+      confirmationRef.current = state;
+      if (event) handleEvent(event);
     } catch (err) {
-      console.warn('Frame processing error:', err);
+      console.warn('Frame processing error:', err.name);
     } finally {
       isProcessingRef.current = false;
     }
-  }, [isScanning]);
+  }, [handleEvent]);
 
-  // Clear bounding boxes if scanning is paused
-  useEffect(() => {
-    if (!isScanning) {
-      setBoundingBoxes([]);
-    }
-  }, [isScanning]);
-
-  // 5. Continuous Scanning Tick (every 750ms)
   useEffect(() => {
     if (!isScanning) return;
-
-    const interval = setInterval(() => {
-      processFrame();
-    }, 750);
-
+    const interval = setInterval(processFrame, FRAME_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [isScanning, processFrame]);
 
+  // One status for the live region. Priority: camera > server > model > paused > audio > scanning.
+  let status;
+  if (CAMERA_MESSAGES[cameraStatus]) status = { tone: 'error', text: CAMERA_MESSAGES[cameraStatus] };
+  else if (serverStatus === 'unreachable') status = { tone: 'error', text: 'Server tidak terhubung. Pemindaian dihentikan.' };
+  else if (serverStatus === 'model_unavailable') status = { tone: 'error', text: 'Model pengenal uang tidak tersedia. Pemindaian dinonaktifkan.' };
+  else if (cameraStatus === 'starting' || serverStatus === 'checking') status = { tone: 'paused', text: 'Menyiapkan kamera dan server' };
+  else if (!isScanning) status = { tone: 'paused', text: 'Pemindai dijeda. Tekan Mulai Pindai.' };
+  else if (audioStatus === 'unavailable') status = { tone: 'error', text: 'Suara tidak tersedia. Naikkan volume perangkat lalu tekan Uji Suara.' };
+  else status = { tone: 'searching', text: 'Memindai. Arahkan satu lembar uang ke kamera.' };
+
+  const ServerIcon = serverStatus === 'ready' ? CheckCircle2 : serverStatus === 'checking' ? Loader : AlertTriangle;
+  const serverClass = serverStatus === 'ready' ? 'is-ready' : serverStatus === 'checking' ? '' : 'is-error';
+  const noteValue = lastResult ? NOMINAL_VALUES[lastResult.label] : null;
+
   return (
     <div className="app-container">
-      {/* Header */}
       <header className="app-header">
-        <div className="brand-section">
-          <div className="brand-icon">
-            <DollarSign size={24} strokeWidth={2.5} />
-          </div>
-          <div>
-            <h1 className="brand-title">TemanNetra</h1>
-            <div className="brand-tagline">Pemindai Uang Kertas</div>
-          </div>
-        </div>
-
-        <div className="status-pill" title={isServerOnline ? 'API Terhubung' : 'API Tidak Terhubung'}>
-          <span className={`status-dot ${isServerOnline ? 'online' : 'offline'}`} />
-          <span>{isServerOnline ? 'Online' : 'Offline'}</span>
+        <h1 className="brand-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <Banknote size={28} aria-hidden="true" /> TemanNetra
+        </h1>
+        <div className={`server-status ${serverClass}`}>
+          <ServerIcon size={20} aria-hidden="true" />
+          <span>{SERVER_LABELS[serverStatus]}</span>
         </div>
       </header>
 
-      {/* Live Scanner Viewport */}
       <ScannerView
         ref={scannerRef}
         isScanning={isScanning}
-        isDetected={scanState === 'DETECTED'}
-        isReady={scanState === 'RESETTING'}
+        isDetected={boundingBoxes.length > 0}
         boxes={boundingBoxes}
+        onCameraStatus={setCameraStatus}
       />
 
-      {/* State Badge */}
-      <StatusBanner scanState={scanState} isScanning={isScanning} />
-
-      {/* Main Detection Announcement Card */}
-      <section
-        className={`detection-card ${scanState === 'DETECTED' ? 'active-note' : ''}`}
-        aria-live="polite"
-      >
-        <div className="label-hint">Hasil Deteksi Suara</div>
-        <div className={`spoken-transcript ${scanState === 'SEARCHING' ? 'placeholder' : ''}`}>
-          {transcript}
-        </div>
-
-        {lastDetections.length > 0 && scanState === 'DETECTED' && (
-          <div className="detected-tags">
-            {lastDetections.map((note, index) => (
-              <span key={index} className="tag-item">
-                <Sparkles size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                {note}
-              </span>
-            ))}
-          </div>
+      {/* Hero: last confirmed note. Single polite live region for results. */}
+      <section className="result" data-note={noteValue || undefined} aria-label="Hasil terakhir" aria-live="polite" aria-atomic="true">
+        <p className="result-caption">Hasil terakhir</p>
+        {lastResult ? (
+          <>
+            <p className="result-amount">{formatRupiah(noteValue)}</p>
+            <p className="result-words">{lastResult.label} Rupiah</p>
+          </>
+        ) : (
+          <p className="result-amount is-empty">Belum ada hasil</p>
         )}
+        {hint && <p className="result-hint">{hint}</p>}
       </section>
 
-      {/* Running Wallet Counter */}
+      <StatusBanner status={status} />
+
       <WalletSummary
         walletItems={walletItems}
         onClearWallet={() => setWalletItems([])}
         onSpeakTotal={handleSpeakTotal}
       />
 
-      {/* Instructions Box */}
-      <div className="instruction-box">
-        <b>Cara Pakai:</b> Pegang uang di depan kamera. Saat uang dilepas, aplikasi akan berbunyi <em>ping</em> dan siap memindai uang berikutnya secara otomatis.
-      </div>
-
-      {/* Primary Accessible Controls */}
       <div className="controls-bar">
         <button
-          onClick={() => {
-            playChime('click');
-            setIsScanning((prev) => !prev);
-          }}
-          className={`action-btn ${isScanning ? 'btn-secondary' : 'btn-primary'}`}
-          aria-label={isScanning ? 'Jeda Pemindaian' : 'Mulai Pemindaian'}
+          onClick={handleToggleScan}
+          disabled={!isScanning && !canScan}
+          aria-disabled={!isScanning && !canScan}
+          className={`action-btn btn-scan ${isScanning ? '' : 'btn-primary'}`}
         >
-          {isScanning ? <Pause size={22} /> : <Play size={22} />}
+          {isScanning ? <Pause size={28} aria-hidden="true" /> : <Play size={28} aria-hidden="true" />}
           <span>{isScanning ? 'Jeda Pindai' : 'Mulai Pindai'}</span>
         </button>
 
-        <button
-          onClick={handleReplayAudio}
-          className="action-btn btn-primary"
-          aria-label="Ulangi Suara Terakhir"
-        >
-          <Volume2 size={22} />
-          <span>Ulangi Suara</span>
+        <button onClick={handleTestAudio} className="action-btn">
+          <Headphones size={24} aria-hidden="true" />
+          <span>Uji Suara</span>
+        </button>
+
+        <button onClick={handleRepeat} className="action-btn">
+          <Volume2 size={24} aria-hidden="true" />
+          <span>Ulangi</span>
         </button>
       </div>
     </div>

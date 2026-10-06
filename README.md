@@ -2,12 +2,13 @@
 
 TemanNetra is a prototype camera-based Indonesian Rupiah banknote reader for blind and low-vision users. It detects banknote denominations with YOLO, announces the result in Indonesian, provides audio and haptic feedback, and keeps a temporary in-browser wallet tally.
 
-> **Prototype status:** the checked-in repository does not include the trained banknote model (`models/best.pt`) or the training dataset. The frontend builds, but end-to-end banknote detection is not verified from this checkout until the custom model is restored.
+> **Prototype status:** recognition accuracy, speech latency and phone support are **not measured or verified**. No held-out evaluation set exists in this repository. `models/best.pt` is Git-ignored and its provenance is undocumented. The training dataset is not included. Do not rely on this app as assistive technology until the evaluation in `IMPROVEMENT_STRATEGY.md` is done.
 
 ## Features
 
 - Rear/front camera switching.
-- Continuous frame capture approximately every 750 ms.
+- Frame capture about every 750 ms while scanning. A denomination is announced only after 3 consecutive matching single-note frames (thresholds are unmeasured defaults).
+- One note at a time: frames with several notes or conflicting denominations are treated as uncertain ("Nominal belum pasti, coba lagi") and never announced or counted.
 - Detection of these denominations:
   - Rp1.000
   - Rp2.000
@@ -16,10 +17,11 @@ TemanNetra is a prototype camera-based Indonesian Rupiah banknote reader for bli
   - Rp20.000
   - Rp50.000
   - Rp100.000
-- Indonesian speech using server-side `gTTS`, with browser `SpeechSynthesis` fallback.
-- Detection chimes and mobile vibration where supported.
-- Bounding-box overlay for accepted detections.
-- Temporary wallet total and note count.
+- Short Indonesian announcements ("Seratus ribu rupiah.") via the browser's `SpeechSynthesis`. New speech interrupts older speech. Playback failures are reported in the UI. Requires an Indonesian-capable voice on the device (unverified).
+- Distinct states: camera permission denied, camera unavailable, insecure context, server unreachable, model unavailable, audio unavailable. Scanning is disabled when the camera, server or model is not ready.
+- Last confirmed result stays visible; **Uji Suara** (test audio) and **Ulangi** (repeat) buttons.
+- Optional vibration; bounding-box overlay.
+- Temporary wallet tally (secondary; counts confirmed notes only).
 
 ## Architecture
 
@@ -28,22 +30,21 @@ Camera
   │
   ▼
 React/Vite frontend :5173
-  │  POST /predict with JPEG frame
+  │  relative /health and /predict (Vite proxy in dev)
   ▼
 FastAPI backend :8000
   │
   ├─ YOLO inference
   ├─ label, geometry, color, and duplicate filtering
   ├─ Indonesian response text
-  └─ optional gTTS audio as base64
   │
   ▼
-Frontend audio, haptic feedback, overlay, and wallet tally
+Frontend confirmation, SpeechSynthesis, haptics, overlay, wallet tally
 ```
 
 ### Frontend
 
-`frontend/src/App.jsx` owns the scan loop and detection state. `ScannerView` captures camera frames. The frontend accepts only the seven canonical labels returned by the backend and sends one frame at a time to avoid overlapping requests.
+`frontend/src/App.jsx` owns the scan loop and detection state. `ScannerView` captures camera frames. The confirmation logic is in `frontend/src/utils/scanLogic.js`; speech in `utils/soundEffects.js`. The frontend accepts only the seven canonical labels and sends one frame at a time.
 
 The wallet is held only in React state. Reloading the page or closing the browser clears it.
 
@@ -51,28 +52,25 @@ The wallet is held only in React state. Reloading the page or closing the browse
 
 `backend/main.py` exposes:
 
-- `GET /` — health and selected model name.
-- `POST /predict` — accepts an uploaded image and returns detections, boxes, speech text, and optional audio.
+- `GET /health` — `{"status": "ready" | "model_unavailable", "model_ready": bool, "reason": str}`.
+- `POST /predict` — multipart `file` (max 5 MB, max 25 megapixels). Returns detections and boxes. `503` when the model is unavailable, `400` for invalid images, `413` for oversized input.
 
-`backend/utils.py` contains label aliases, geometry/color validation, duplicate suppression, speech formatting, and the in-memory audio cache.
+There is no CORS middleware; the UI is expected to be same-origin.
+
+`backend/utils.py` contains label aliases, `build_class_map`, geometry/color validation, duplicate suppression, and the text formatter.
 
 ## Model requirement
 
-At startup the backend loads:
+At startup the backend loads **only** `models/best.pt`. The generic `yolov8n.pt` is not used for detection. The backend accepts the model only if its class **names** map exactly onto the seven denominations through `BANKNOTE_ALIAS_MAP` (for example `1000`, `10000`, `100000`, `2000`, `20000`, `5000`, `50000`, or `1k`..`100k`). Class order is never guessed. If the file is missing or incompatible, `/health` reports `model_unavailable` and the app disables scanning.
 
-1. `models/best.pt`, if present.
-2. Otherwise `models/yolov8n.pt`.
-
-`models/best.pt` is the required custom banknote detector. It is ignored by Git because model weights are large. The checked-in `yolov8n.pt` is the standard generic YOLOv8 nano model, not the trained Rupiah detector; it is a fallback for development and should not be considered sufficient for the intended feature.
-
-The training configuration expects the ignored dataset directories under `backend/data/`. The YAML files currently contain machine-specific absolute paths and must be updated before training on another machine.
+`models/best.pt` is ignored by Git. There is no download URL, no training recipe that produces it from scratch, and no dataset in this repository. The checked-in `yolov8n.pt` is only the generic COCO base.
 
 ## Requirements
 
 - Python 3.9+ recommended.
 - Node.js and npm.
-- A browser with camera permission.
-- A trained `models/best.pt` for actual banknote detection.
+- A browser with camera permission, served from `localhost` or HTTPS.
+- A trained `models/best.pt` (see above).
 - Backend dependencies from `backend/requirements.txt`.
 
 ## Local development
@@ -100,14 +98,7 @@ PyTorch and Ultralytics may require a platform-specific installation choice. Fol
 
 ### 3. Restore the model
 
-Place the trained model at:
-
-```text
-models/best.pt
-```
-
-Without it, the application may start but is not expected to detect Rupiah banknotes correctly.
-There is no model download URL or training dataset in this repository. A fresh clone cannot obtain a working banknote detector without an external `best.pt` artifact or separately restored training data. Do not treat a successful backend health check as proof that detection works.
+Place the trained model at `models/best.pt`. Without a compatible model the app starts but reports `model unavailable` and cannot scan.
 
 ### 4. Start the backend
 
@@ -122,7 +113,7 @@ The script uses `backend/venv/bin/python` when available, otherwise `venv/bin/py
 To check it:
 
 ```bash
-curl http://127.0.0.1:8000/
+curl http://127.0.0.1:8000/health
 ```
 
 ### 5. Start the frontend
@@ -136,26 +127,20 @@ npm run dev
 
 Open the printed Vite URL, normally `http://localhost:5173`.
 
-The frontend currently uses this fixed API URL:
+The frontend calls relative `/health` and `/predict`. In development, Vite forwards them to `http://127.0.0.1:8000` (`frontend/vite.config.js`). The same applies to `npm run preview`.
 
-```text
-http://127.0.0.1:8000
-```
+### Deployment topology and phones
 
-For a phone accessing Vite over a local network, edit `API_BASE_URL` in `frontend/src/App.jsx` from `http://127.0.0.1:8000` to the host computer's LAN address, for example `http://192.168.1.20:8000`. Start Vite with its existing `host: '0.0.0.0'` setting, ensure the phone and computer share the same network, and allow the backend port through the host firewall. `127.0.0.1` on the phone refers to the phone itself.
+- **Verified:** same computer, `http://localhost:5173`. The page loads, the camera is acquired and `/health` and `/predict` work through the proxy. Speech from a real banknote through the camera was not tested.
+- **Not verified:** phone use. The dev server now listens on localhost only. Browsers require a secure context for the camera, so a plain `http://<LAN-IP>:5173` URL is not expected to work. A phone needs an HTTPS origin that serves the built frontend and forwards `/health` and `/predict` to the local FastAPI process (for example through a reverse proxy). That setup is not provided or tested here.
+- Do not expose the API publicly: it has no authentication or rate limiting.
 
 ## API
 
-### `GET /`
-
-Example response:
+### `GET /health`
 
 ```json
-{
-  "status": "Active",
-  "message": "TemanNetra API is running",
-  "model_file": "best.pt"
-}
+{"status": "ready", "model_ready": true, "reason": ""}
 ```
 
 ### `POST /predict`
@@ -182,16 +167,15 @@ Response shape:
       "box_normalized": [0.02, 0.04, 0.87, 0.92]
     }
   ],
-  "image_size": {"width": 577, "height": 433},
-  "audio_b64": "..."
+  "image_size": {"width": 577, "height": 433}
 }
 ```
 
-`audio_b64` may be `null` when gTTS is unavailable or no banknote is detected. The frontend falls back to browser speech synthesis.
-
 ## Training
 
-`backend/train_finetune.py` fine-tunes `models/best.pt` using `backend/data/dataset_finetune.yaml` and writes the result under `runs/finetune_5k/`. It then copies the resulting `weights/best.pt` back to `models/best.pt`.
+There is no verified path from the base model to a first `best.pt`. In outline (**untested here**, dataset required), an initial run would be `yolo detect train model=models/yolov8n.pt data=backend/data/dataset.yaml`, followed by copying the resulting `weights/best.pt` to `models/best.pt`.
+
+`backend/train_finetune.py` fine-tunes an existing `models/best.pt` using `backend/data/dataset_finetune.yaml` and writes the result under `runs/finetune_5k/`. It then copies the resulting `weights/best.pt` back to `models/best.pt`.
 
 Before training:
 
@@ -210,25 +194,24 @@ python train_finetune.py 5
 
 ## Verification status
 
-Verified in the repository audit:
+Run in this checkout:
 
-- Python source files compile successfully with `py_compile`.
-- Frontend production build succeeds with `npm run build`.
-- Frontend dependencies install with `npm ci`.
+- `venv/bin/python -m unittest backend.test_main` — class mapping, readiness, upload bounds, no CORS (fake detector).
+- `cd frontend && npm test` — confirmation state machine and speech serialization/failure handling (mocked `SpeechSynthesis`).
+- `cd frontend && npm run build`.
+- Smoke: with the local `best.pt`, `/predict` through the Vite proxy returned a plausible label for the three sample photos in `models/`. This is a smoke check, not an accuracy measurement.
 
-Not verified from the checked-in repository:
+Not verified (blocked on real notes, a held-out dataset or the target phone):
 
-- Backend startup, because Python backend dependencies are not installed in the audit environment.
-- End-to-end banknote prediction, because `models/best.pt` is absent.
-- Training, because the dataset is absent.
-- Container deployment, because `backend/Dockerfile` is currently empty.
+- Recognition accuracy, false announcements on no-note scenes, threshold choice.
+- Capture-to-speech latency, Indonesian voice availability and quality, screen-reader interaction.
+- Phone camera/HTTPS setup.
+- Training, and container deployment (`backend/Dockerfile` is empty).
 
 ## Security and privacy notes
 
-- Camera frames are sent to the local FastAPI server for inference.
-- The image itself is not sent to `gTTS`; only the generated speech text is used for audio generation.
-- The API has no authentication, rate limiting, or upload-size limit.
-- CORS is currently permissive. Do not expose the backend publicly without restricting origins, methods, headers, and upload handling.
+- Camera frames are sent to the local FastAPI server for inference and are not stored or logged. No external speech service is used.
+- Uploads are capped (5 MB, 25 megapixels). The API has no authentication or rate limiting.
 - Treat results as assistive suggestions, not financial verification. Test extensively across lighting, angles, occlusion, damaged notes, and cluttered backgrounds before real-world use.
 
 ## Repository layout
@@ -238,6 +221,7 @@ Not verified from the checked-in repository:
 ├── backend/
 │   ├── data/                  # Dataset YAML files; image data is not committed
 │   ├── main.py                # FastAPI API and YOLO inference
+│   ├── test_main.py           # Backend tests (fake detector)
 │   ├── requirements.txt
 │   ├── train_finetune.py      # Optional fine-tuning script
 │   └── utils.py               # Labels, validation, speech, and box filtering
@@ -249,7 +233,7 @@ Not verified from the checked-in repository:
 │   ├── package.json
 │   └── vite.config.js
 ├── models/
-│   ├── yolov8n.pt             # Generic fallback model
+│   ├── yolov8n.pt             # Generic COCO base (not a banknote detector)
 │   └── test_detected_*.jpg    # Sample images
 ├── run_backend.sh
 └── README.md

@@ -1,6 +1,5 @@
-// Audio helper for TemanNetra: Base64 audio player and synthesized sound cues
+// Audio helper for TemanNetra: serialized speech and synthesized sound cues
 
-let currentAudio = null;
 let audioCtx = null;
 
 function getAudioContext() {
@@ -16,29 +15,60 @@ function getAudioContext() {
   return audioCtx;
 }
 
+let speechToken = 0;
+let speaking = false;
+const START_TIMEOUT_MS = 3000;
+
+export const isSpeechSupported = () =>
+  typeof globalThis.speechSynthesis !== 'undefined' && typeof globalThis.SpeechSynthesisUtterance !== 'undefined';
+
+export const isSpeaking = () => speaking;
+
 /**
- * Play base64 MP3 audio stream returned by gTTS / FastAPI
+ * Speak with the browser's SpeechSynthesis. Serialized: a new call cancels whatever is
+ * still playing (obsolete prompts never overlap). Resolves 'done' | 'interrupted';
+ * rejects (never silently succeeds) when speech is unsupported, blocked, errors, or never starts.
  */
-export function playBase64Audio(base64Data) {
+export function speak(text) {
+  if (!isSpeechSupported()) return Promise.reject(new Error('speech-unsupported'));
+  const synth = globalThis.speechSynthesis;
+  const token = ++speechToken;
+  synth.cancel();
+
   return new Promise((resolve, reject) => {
-    try {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
+    const utterance = new globalThis.SpeechSynthesisUtterance(text);
+    utterance.lang = 'id-ID';
+    const voice = synth.getVoices?.().find((v) => v.lang?.toLowerCase().startsWith('id'));
+    if (voice) utterance.voice = voice;
+
+    let started = false;
+    const timer = setTimeout(() => {
+      if (!started && token === speechToken) {
+        speaking = false;
+        reject(new Error('speech-timeout')); // settle first: cancel() fires 'interrupted'
+        synth.cancel();
       }
+    }, START_TIMEOUT_MS);
+    const finish = (fn) => {
+      clearTimeout(timer);
+      if (token === speechToken) speaking = false;
+      fn();
+    };
 
-      const audio = new Audio(`data:audio/mp3;base64,${base64Data}`);
-      currentAudio = audio;
+    utterance.onstart = () => {
+      started = true;
+      if (token === speechToken) speaking = true;
+    };
+    utterance.onend = () => finish(() => resolve(token === speechToken ? 'done' : 'interrupted'));
+    utterance.onerror = (e) =>
+      finish(() =>
+        e.error === 'interrupted' || e.error === 'canceled' ? resolve('interrupted') : reject(new Error(e.error || 'speech-error'))
+      );
 
-      audio.onended = () => resolve();
-      audio.onerror = (e) => reject(e);
-
-      audio.play().catch((err) => {
-        console.warn("Autoplay blocked or audio play failed:", err);
-        resolve();
-      });
+    try {
+      synth.speak(utterance);
     } catch (err) {
-      reject(err);
+      finish(() => reject(err));
     }
   });
 }
@@ -47,6 +77,7 @@ export function playBase64Audio(base64Data) {
  * Synthesize distinct acoustic feedback tones using Web Audio API
  */
 export function playChime(type = 'detected') {
+  if (speaking) return; // cues never overlap speech
   try {
     const ctx = getAudioContext();
     if (!ctx) return;

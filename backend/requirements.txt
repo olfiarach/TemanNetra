@@ -4,6 +4,5 @@ watchfiles
 ultralytics
 torch
 torchvision
-gTTS
 pillow
 python-multipart

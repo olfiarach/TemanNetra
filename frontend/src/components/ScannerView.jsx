@@ -2,12 +2,19 @@ import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } f
 import { Camera, RefreshCw, AlertCircle } from 'lucide-react';
 import BoundingBoxOverlay from './BoundingBoxOverlay';
 
-const ScannerView = forwardRef(({ isScanning, isDetected, isReady, boxes = [] }, ref) => {
+export const CAMERA_MESSAGES = {
+  denied: 'Izin kamera ditolak. Izinkan akses kamera di pengaturan browser, lalu tekan Coba Lagi.',
+  unavailable: 'Kamera tidak tersedia atau sedang dipakai aplikasi lain.',
+  insecure: 'Kamera hanya bisa dipakai lewat HTTPS atau localhost. Buka aplikasi melalui alamat yang aman.',
+};
+
+const ScannerView = forwardRef(({ isScanning, isDetected, boxes = [], onCameraStatus }, ref) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const viewportRef = useRef(null);
   const [facingMode, setFacingMode] = useState('environment'); // Default to rear camera for scanning
-  const [cameraError, setCameraError] = useState(null);
+  const [cameraError, setCameraError] = useState(null); // null | 'denied' | 'unavailable' | 'insecure'
+  const [attempt, setAttempt] = useState(0);
   const [streamActive, setStreamActive] = useState(false);
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
   const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
@@ -49,57 +56,57 @@ const ScannerView = forwardRef(({ isScanning, isDetected, isReady, boxes = [] },
   // Initialize camera stream
   useEffect(() => {
     let stream = null;
+    let cancelled = false;
+
+    const report = (status) => {
+      if (cancelled) return;
+      setCameraError(status === 'ready' || status === 'starting' ? null : status);
+      setStreamActive(status === 'ready');
+      onCameraStatus?.(status);
+    };
 
     async function startCamera() {
-      setCameraError(null);
+      report('starting');
+      if (!window.isSecureContext) {
+        report('insecure');
+        return;
+      }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        report('unavailable');
+        return;
+      }
       try {
-        if (videoRef.current && videoRef.current.srcObject) {
-          const oldTracks = videoRef.current.srcObject.getTracks();
-          oldTracks.forEach((track) => track.stop());
-        }
-
-        const baseConstraints = {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 24, max: 24 },
-        };
-
         try {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: baseConstraints,
+            video: { facingMode: { ideal: facingMode }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } },
             audio: false,
           });
         } catch (constraintErr) {
-          console.warn('Could not apply exact 24fps max, falling back to ideal 24fps:', constraintErr);
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              ...baseConstraints,
-              frameRate: { ideal: 24 },
-            },
-            audio: false,
-          });
+          if (constraintErr.name === 'NotAllowedError' || constraintErr.name === 'SecurityError') throw constraintErr;
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         }
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-          setStreamActive(true);
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
         }
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        report('ready');
       } catch (err) {
-        console.error('Camera access error:', err);
-        setCameraError('Izin kamera diperlukan untuk memindai uang. Pastikan browser mengizinkan akses kamera.');
-        setStreamActive(false);
+        console.warn('Camera error:', err.name);
+        report(err.name === 'NotAllowedError' || err.name === 'SecurityError' ? 'denied' : 'unavailable');
       }
     }
 
     startCamera();
 
     return () => {
+      cancelled = true;
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [facingMode]);
+  }, [facingMode, attempt]);
 
   // Flip camera between environment (rear) and user (front)
   const toggleFacingMode = () => {
@@ -112,7 +119,7 @@ const ScannerView = forwardRef(({ isScanning, isDetected, isReady, boxes = [] },
       return new Promise((resolve) => {
         const video = videoRef.current;
         const canvas = canvasRef.current;
-        if (!video || !canvas || video.readyState !== 4) {
+        if (!video || !canvas || !streamActive || video.readyState !== 4) {
           resolve(null);
           return;
         }
@@ -140,16 +147,19 @@ const ScannerView = forwardRef(({ isScanning, isDetected, isReady, boxes = [] },
   return (
     <div className="scanner-viewport" ref={viewportRef}>
       {cameraError ? (
-        <div style={{ padding: '30px', textAlign: 'center', color: '#f87171' }}>
-          <AlertCircle size={48} style={{ margin: '0 auto 12px auto' }} />
-          <p style={{ fontWeight: 700 }}>{cameraError}</p>
-          <button
-            onClick={() => setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))}
-            className="action-btn btn-primary"
-            style={{ marginTop: '16px', display: 'inline-flex' }}
-          >
-            Coba Kamera Lain
-          </button>
+        <div className="camera-error">
+          <AlertCircle size={48} aria-hidden="true" />
+          <p>{CAMERA_MESSAGES[cameraError]}</p>
+          {cameraError !== 'insecure' && (
+            <button onClick={() => setAttempt((n) => n + 1)} className="action-btn btn-primary">
+              Coba Lagi
+            </button>
+          )}
+          {cameraError === 'unavailable' && (
+            <button onClick={toggleFacingMode} className="action-btn">
+              Coba Kamera Lain
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -163,8 +173,8 @@ const ScannerView = forwardRef(({ isScanning, isDetected, isReady, boxes = [] },
             aria-label="Tampilan kamera langsung"
           />
 
-          {/* Animated Laser Scanning Beam (active when scanning) */}
-          {isScanning && <div className="scanner-laser" />}
+          {/* Subtle scanning indicator (hidden under reduced motion) */}
+          {isScanning && <div className="scan-line" aria-hidden="true" />}
 
           {/* Dynamic Bounding Box Overlay for detected banknotes */}
           <BoundingBoxOverlay
@@ -185,11 +195,11 @@ const ScannerView = forwardRef(({ isScanning, isDetected, isReady, boxes = [] },
           <div className="camera-controls-overlay">
             <button
               onClick={toggleFacingMode}
-              className="icon-btn-floating"
+              className="icon-btn"
               title="Ganti Kamera Depan/Belakang"
               aria-label="Ganti Kamera Depan atau Belakang"
             >
-              <RefreshCw size={20} />
+              <RefreshCw size={24} aria-hidden="true" />
             </button>
           </div>
         </>

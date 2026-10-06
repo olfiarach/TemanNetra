@@ -1,40 +1,18 @@
 import React from 'react';
-import { Eye, CheckCircle2, RotateCcw, PauseCircle } from 'lucide-react';
+import { Eye, AlertTriangle, PauseCircle } from 'lucide-react';
 
-export default function StatusBanner({ scanState, isScanning }) {
-  if (!isScanning) {
-    return (
-      <div className="status-banner">
-        <div className="state-badge paused">
-          <PauseCircle size={24} />
-          <span>Pemindai Dijeda</span>
-        </div>
-      </div>
-    );
-  }
+const ICONS = { searching: Eye, error: AlertTriangle, paused: PauseCircle };
 
+// Single polite live region for scanner state and errors. Confirmed results live in their own region in App
+// by the app and shown in the result card (not live) so they are not announced twice.
+export default function StatusBanner({ status }) {
+  const Icon = ICONS[status.tone] || Eye;
   return (
-    <div className="status-banner">
-      {scanState === 'SEARCHING' && (
-        <div className="state-badge searching">
-          <Eye size={24} />
-          <span>Mencari Uang... Arahkan ke Kamera</span>
-        </div>
-      )}
-
-      {scanState === 'DETECTED' && (
-        <div className="state-badge detected">
-          <CheckCircle2 size={24} />
-          <span>Uang Terdeteksi!</span>
-        </div>
-      )}
-
-      {scanState === 'RESETTING' && (
-        <div className="state-badge cleared">
-          <RotateCcw size={24} />
-          <span>Siap Untuk Uang Baru</span>
-        </div>
-      )}
+    <div className="status-banner" role="status">
+      <div className={`state-badge ${status.tone}`}>
+        <Icon size={26} aria-hidden="true" />
+        <span>{status.text}</span>
+      </div>
     </div>
   );
 }

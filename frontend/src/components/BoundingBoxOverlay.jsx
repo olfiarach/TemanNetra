@@ -88,16 +88,10 @@ export default function BoundingBoxOverlay({
     <div className="bounding-box-overlay" aria-hidden="true">
       {renderedBoxes.map((item) => (
         <div key={item.id} className="bounding-box-item" style={item.style}>
-          {/* Neon corner bracket accents */}
-          <span className="bbox-corner bbox-corner-tl" />
-          <span className="bbox-corner bbox-corner-tr" />
-          <span className="bbox-corner bbox-corner-bl" />
-          <span className="bbox-corner bbox-corner-br" />
-
-          {/* Floating HUD Denomination Badge */}
+          {/* Denomination badge */}
           <div className={`bounding-box-badge ${item.isNearTop ? 'badge-inside' : 'badge-outside'}`}>
             <span className="badge-icon">
-              <CheckCircle2 size={13} strokeWidth={2.8} />
+              <CheckCircle2 size={16} strokeWidth={2.8} />
             </span>
             <span className="badge-nominal">{item.nominalDisplay}</span>
             {item.confidencePercent && (
