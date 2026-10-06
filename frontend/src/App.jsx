@@ -222,6 +222,7 @@ export default function App() {
   else if (cameraStatus === 'starting' || serverStatus === 'checking') status = { tone: 'paused', text: 'Menyiapkan kamera dan server' };
   else if (!isScanning) status = { tone: 'paused', text: 'Pemindai dijeda. Tekan Mulai Pindai.' };
   else if (audioStatus === 'unavailable') status = { tone: 'error', text: 'Suara tidak tersedia. Naikkan volume perangkat lalu tekan Uji Suara.' };
+  else if (boundingBoxes.length > 0 && !confirmationRef.current.confirmed) status = { tone: 'searching', text: 'Uang terlihat, memastikan nominal…' };
   else status = { tone: 'searching', text: 'Memindai. Arahkan satu lembar uang ke kamera.' };
 
   const ServerIcon = serverStatus === 'ready' ? CheckCircle2 : serverStatus === 'checking' ? Loader : AlertTriangle;
