@@ -15,7 +15,7 @@ const UNCERTAIN_PROMPT = 'Nominal belum pasti, coba lagi';
 
 const SERVER_LABELS = {
   checking: 'Memeriksa server',
-  unreachable: 'Server tidak terhubung',
+  unreachable: 'Server sedang memulai',
   model_unavailable: 'Model pengenal uang tidak tersedia',
   ready: 'Server siap',
 };
@@ -61,6 +61,7 @@ export default function App() {
   // Health check (also reports model readiness)
   useEffect(() => {
     async function checkHealth() {
+      if (document.hidden) return; // no polling in background tabs
       try {
         const res = await fetch('/health', { signal: AbortSignal.timeout(4000) });
         if (!res.ok) throw new Error(`health ${res.status}`);
@@ -217,7 +218,7 @@ export default function App() {
   // One status for the live region. Priority: camera > server > model > paused > audio > scanning.
   let status;
   if (CAMERA_MESSAGES[cameraStatus]) status = { tone: 'error', text: CAMERA_MESSAGES[cameraStatus] };
-  else if (serverStatus === 'unreachable') status = { tone: 'error', text: 'Server tidak terhubung. Pemindaian dihentikan.' };
+  else if (serverStatus === 'unreachable') status = { tone: 'error', text: 'Server sedang memulai. Tunggu sebentar lalu coba lagi.' };
   else if (serverStatus === 'model_unavailable') status = { tone: 'error', text: 'Model pengenal uang tidak tersedia. Pemindaian dinonaktifkan.' };
   else if (cameraStatus === 'starting' || serverStatus === 'checking') status = { tone: 'paused', text: 'Menyiapkan kamera dan server' };
   else if (!isScanning) status = { tone: 'paused', text: 'Pemindai dijeda. Tekan Mulai Pindai.' };
@@ -263,6 +264,8 @@ export default function App() {
         )}
         {hint && <p className="result-hint">{hint}</p>}
       </section>
+
+      <p className="result-hint">Demo eksperimental. Bukan alat verifikasi keaslian atau nilai uang.</p>
 
       <StatusBanner status={status} />
 

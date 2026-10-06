@@ -1,0 +1,11 @@
+.git
+venv
+backend/venv
+**/__pycache__
+**/node_modules
+frontend/dist
+runs
+backend/data
+models/*.pt
+**/.DS_Store
+docs

@@ -1,11 +1,15 @@
 import io
 import json
+import os
+import time
+from collections import defaultdict, deque
 from functools import lru_cache
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from gtts import gTTS
 from PIL import Image, UnidentifiedImageError
 
@@ -107,8 +111,29 @@ def tts(text: str = Query(..., min_length=1, max_length=200)):
         raise HTTPException(status_code=503, detail="tts-unavailable")  # client falls back to browser voice
 
 
+# ponytail: per-process limiter; counters are not shared across instances/workers
+RATE_LIMIT, RATE_WINDOW_S, MAX_CLIENTS = 30, 10.0, 10_000
+_hits: dict[str, deque] = defaultdict(deque)
+
+
+def _rate_limited(request: Request) -> bool:
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[0].strip()
+    now = time.monotonic()
+    if len(_hits) > MAX_CLIENTS:
+        _hits.clear()  # bounded memory; crude but fail-safe
+    q = _hits[ip]
+    while q and now - q[0] > RATE_WINDOW_S:
+        q.popleft()
+    if len(q) >= RATE_LIMIT:
+        return True
+    q.append(now)
+    return False
+
+
 @app.post("/predict")
-async def predict_rupiah(file: UploadFile = File(...)):
+async def predict_rupiah(request: Request, file: UploadFile = File(...)):
+    if _rate_limited(request):
+        raise HTTPException(429, "too many requests")
     if MODEL is None:
         raise HTTPException(503, f"model unavailable: {MODEL_ERROR}")
 
@@ -171,12 +196,17 @@ async def predict_rupiah(file: UploadFile = File(...)):
         "image_size": {"width": img_w, "height": img_h},
     }
 
+# Production: serve the built UI same-origin. Mounted last so API routes win.
+DIST_DIR = BASE_DIR / "frontend" / "dist"
+if DIST_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=DIST_DIR, html=True), name="web")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "main:app",
-        host="127.0.0.1",
-        port=8000,
+        host=os.environ.get("HOST", "127.0.0.1"),
+        port=int(os.environ.get("PORT", 8000)),
         reload=True,
         app_dir=str(BACKEND_DIR),
         reload_dirs=[str(BACKEND_DIR)],
