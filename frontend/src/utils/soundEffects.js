@@ -15,6 +15,9 @@ function getAudioContext() {
   return audioCtx;
 }
 
+// Warm the voice list early so the first utterance can pick an Indonesian voice
+globalThis.speechSynthesis?.getVoices?.();
+
 let speechToken = 0;
 let speaking = false;
 const START_TIMEOUT_MS = 3000;
@@ -30,15 +33,43 @@ export const isSpeaking = () => speaking;
  * rejects (never silently succeeds) when speech is unsupported, blocked, errors, or never starts.
  */
 export function speak(text) {
+  const token = ++speechToken;
+  globalThis.speechSynthesis?.cancel?.();
+  player?.pause();
+  if (typeof globalThis.Audio === 'undefined') return speakBrowser(text, token);
+  // Indonesian gTTS from the backend; browser voice only if that fails
+  return playRemote(text, token).catch((err) =>
+    token === speechToken ? speakBrowser(text, token) : 'interrupted'
+  );
+}
+
+let player; // one reused element: once unlocked by a gesture, iOS keeps allowing playback
+async function playRemote(text, token) {
+  const res = await fetch(`/tts?text=${encodeURIComponent(text)}`, { signal: AbortSignal.timeout(4000) });
+  if (!res.ok) throw new Error('tts-unavailable');
+  const url = URL.createObjectURL(await res.blob());
+  if (token !== speechToken) return URL.revokeObjectURL(url), 'interrupted';
+  player ??= new globalThis.Audio();
+  player.src = url;
+  return new Promise((resolve, reject) => {
+    const end = (fn) => { URL.revokeObjectURL(url); if (token === speechToken) speaking = false; fn(); };
+    player.onplaying = () => { if (token === speechToken) speaking = true; };
+    player.onended = () => end(() => resolve(token === speechToken ? 'done' : 'interrupted'));
+    player.onerror = () => end(() => reject(new Error('audio-error')));
+    player.play().catch((e) => end(() => reject(e)));
+  });
+}
+
+function speakBrowser(text, token) {
   if (!isSpeechSupported()) return Promise.reject(new Error('speech-unsupported'));
   const synth = globalThis.speechSynthesis;
-  const token = ++speechToken;
   synth.cancel();
 
   return new Promise((resolve, reject) => {
     const utterance = new globalThis.SpeechSynthesisUtterance(text);
     utterance.lang = 'id-ID';
-    const voice = synth.getVoices?.().find((v) => v.lang?.toLowerCase().startsWith('id'));
+    // Android Chrome reports 'in-ID'/'id_ID'; voices may be empty until 'voiceschanged' fires
+    const voice = synth.getVoices?.().find((v) => /^(id|in)[-_]/i.test(v.lang || ''));
     if (voice) utterance.voice = voice;
 
     let started = false;

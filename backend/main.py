@@ -1,8 +1,11 @@
 import io
+from functools import lru_cache
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.responses import Response
+from gtts import gTTS
 from PIL import Image, UnidentifiedImageError
 
 # Ensure both project root and backend directory are in sys.path
@@ -76,6 +79,22 @@ def health():
         "model_ready": MODEL is not None,
         "reason": MODEL_ERROR,
     }
+
+
+@lru_cache(maxsize=256)
+def _tts_mp3(text: str) -> bytes:
+    buf = io.BytesIO()
+    gTTS(text=text, lang="id").write_to_fp(buf)
+    return buf.getvalue()
+
+
+@app.get("/tts")
+def tts(text: str = Query(..., min_length=1, max_length=200)):
+    """Indonesian speech (gTTS) so the accent never depends on device voices."""
+    try:
+        return Response(_tts_mp3(text), media_type="audio/mpeg")
+    except Exception:
+        raise HTTPException(status_code=503, detail="tts-unavailable")  # client falls back to browser voice
 
 
 @app.post("/predict")

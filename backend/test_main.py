@@ -73,6 +73,14 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(r["detections"], ["Seratus Ribu"])
         self.assertNotIn("audio_b64", r)
 
+    def test_tts_returns_mp3_and_503_on_failure(self):
+        from unittest import mock
+        with mock.patch.object(main, "_tts_mp3", return_value=b"ID3x"):
+            r = self.client.get("/tts", params={"text": "Seratus ribu rupiah"})
+        self.assertEqual((r.status_code, r.headers["content-type"]), (200, "audio/mpeg"))
+        with mock.patch.object(main, "_tts_mp3", side_effect=OSError):
+            self.assertEqual(self.client.get("/tts", params={"text": "x"}).status_code, 503)
+
     def test_no_note_and_color_filter(self):
         self.ready([])
         self.assertEqual(self.post(jpeg()).json()["detections"], [])

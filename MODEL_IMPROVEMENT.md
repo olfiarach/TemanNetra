@@ -24,6 +24,13 @@ Recommended initial target:
 - A separate held-out set containing no images or videos from training sessions.
 - Hard-negative examples deliberately added after every evaluation round.
 
+#### Candidate public data and notebook
+
+- [RUPIAH KERTAS 2022](https://www.kaggle.com/datasets/fannyzahrahramadhan/rupiah-kertas-2022?select=Uang+Baru) may help bootstrap the seven 2022 denominations. Before use, download and inspect `Uang Baru`: verify class names/counts, front/back coverage, duplicates, image conditions, annotation format, and permission to train/distribute a model. [Kaggle metadata](https://www.kaggle.com/api/v1/datasets/view/fannyzahrahramadhan/rupiah-kertas-2022) lists its license as `Unknown`; do not assume reuse rights. Neither contents nor performance have been verified here.
+- [Indonesian Rupiah Currency Classification](https://www.kaggle.com/code/nasdevs/indonesian-rupiah-currency-classification) is a *classification* reference, not a drop-in YOLO detector or `best.pt`. Its public page says it uses “Uang emisi 2022 baru”; do not assume it trains on the linked `RUPIAH KERTAS 2022` dataset without inspecting the notebook inputs. Check its preprocessing, labels, split, outputs, and reuse terms before borrowing ideas.
+- The backend expects a YOLO **detection** model with seven named classes and bounding boxes. If the downloaded images have only folder-level class labels, they cannot train that detector as-is: annotate note boxes in real camera frames. Full-image boxes on clean single-note photos are at most a bootstrap; they do not demonstrate localization amid clutter. Keep public images out of the independent phone-camera held-out set.
+- The checked-in `models/yolov8n.pt` is a generic starting checkpoint, **not** a banknote detector. An initial detection run needs verified box annotations and `backend/data/dataset.yaml` (replace its machine-specific absolute `path:`). `backend/train_finetune.py` requires an existing `models/best.pt` and its own machine-specific dataset path, so it cannot create the first model. Validate the resulting class names before copying weights to `models/best.pt`; evaluate on independent note/no-note scenes before enabling speech.
+
 ### 2. Remove label ambiguity completely
 
 The model must output canonical denominations directly:
