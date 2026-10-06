@@ -156,7 +156,8 @@ AUDIO_CACHE: Dict[str, str] = {}
 def is_valid_banknote_geometry(xyxy: List[float], img_w: int, img_h: int) -> bool:
     """
     Validate banknote geometry to discard tiny noise artifacts, extreme thin slivers,
-    and full-screen hallucinations (boxes covering > 78% of the camera screen).
+    and invalid bounding boxes, while accommodating banknotes held at various angles
+    and distances from the camera.
     """
     if img_w <= 0 or img_h <= 0:
         return False
@@ -168,37 +169,23 @@ def is_valid_banknote_geometry(xyxy: List[float], img_w: int, img_h: int) -> boo
 
     # Total area ratio of the box relative to camera frame
     area_ratio = (bw * bh) / float(img_w * img_h)
-    
-    # 1. Reject tiny speck noise (< 1.5% of frame)
-    if area_ratio < 0.015:
+
+    # 1. Reject tiny speck noise (< 1.0% of frame)
+    if area_ratio < 0.010:
         return False
 
-    # 2. Reject full-screen scene hallucinations (> 75% of the camera frame)
-    # A banknote held in hand never covers the entire screen from edge to edge
-    if area_ratio > 0.75:
+    # 2. Reject full-screen scene / room / wall hallucinations
+    # Banknotes have an aspect ratio of ~2.2:1. Even when held very close,
+    # a banknote cannot simultaneously occupy >= 85% of width AND >= 80% of height,
+    # nor can it cover > 82% of the entire camera screen.
+    if (bw >= 0.85 * img_w and bh >= 0.80 * img_h) or area_ratio > 0.82:
         return False
 
-    # 3. Reject boxes spanning almost the entire width AND height simultaneously
-    if bw >= 0.88 * img_w and bh >= 0.88 * img_h:
+    # 3. Reject invisible sub-dimension artifacts (< 3% in either dimension)
+    if bw < 0.03 * img_w or bh < 0.03 * img_h:
         return False
 
-    # 4. Reject wide horizontal strips glued to the bottom border (keyboard / desk surface)
-    if xyxy[3] >= 0.95 * img_h and bw >= 0.50 * img_w:
-        return False
-
-    # 5. Reject tall vertical columns glued to the bottom border (user's body / torso in front of webcam)
-    if xyxy[3] >= 0.95 * img_h and bh >= 0.65 * img_h:
-        return False
-
-    # 6. Reject full-height vertical columns (ceiling to desk)
-    if bh >= 0.85 * img_h:
-        return False
-
-    # 7. Reject 1-pixel artifacts
-    if bw < 0.05 * img_w or bh < 0.05 * img_h:
-        return False
-
-    # 8. Discard extreme thin lines (> 4.5 aspect ratio)
+    # 4. Reject extreme thin line slivers (> 4.5 aspect ratio)
     aspect_ratio = max(bw, bh) / max(min(bw, bh), 1.0)
     if aspect_ratio > 4.5:
         return False
@@ -206,28 +193,52 @@ def is_valid_banknote_geometry(xyxy: List[float], img_w: int, img_h: int) -> boo
     return True
 
 
-def deduplicate_boxes(candidate_boxes: List[dict], iou_threshold: float = 0.20, containment_threshold: float = 0.40) -> List[dict]:
+def is_valid_banknote_color(crop_im) -> bool:
+    """
+    Validate that the detected region has rich color saturation typical of genuine currency.
+    Discards monochrome white/gray walls, ceiling plaster, and blank desk surfaces (mean saturation < 36).
+    Genuine Indonesian banknotes consistently display mean saturation > 48 across all denominations.
+    """
+    try:
+        import numpy as np
+        hsv_arr = np.array(crop_im.convert("HSV"))
+        mean_sat = float(hsv_arr[:, :, 1].mean())
+        return mean_sat >= 36.0
+    except Exception:
+        return True
+
+
+def deduplicate_boxes(candidate_boxes: List[dict], iou_threshold: float = 0.45, containment_threshold: float = 0.70) -> List[dict]:
     """
     Perform spatial Non-Maximum Suppression to ensure the same physical banknote is never
-    reported as multiple overlapping boxes.
-    candidate_boxes must contain 'box_2d' and 'confidence'.
+    reported as multiple overlapping boxes, while allowing multiple distinct banknotes
+    held side-by-side or partially fanned out to be detected simultaneously.
     """
-    # Sort candidates by confidence descending
     sorted_candidates = sorted(candidate_boxes, key=lambda b: b.get("confidence", 0), reverse=True)
     kept_boxes = []
 
     for cand in sorted_candidates:
         cand_coords = cand["box_2d"]
+        cand_label = cand.get("label")
         overlaps_existing = False
 
         for kept in kept_boxes:
             kept_coords = kept["box_2d"]
+            kept_label = kept.get("label")
             iou = compute_iou(cand_coords, kept_coords)
             containment = compute_containment(cand_coords, kept_coords)
 
-            if iou > iou_threshold or containment > containment_threshold:
-                overlaps_existing = True
-                break
+            if cand_label == kept_label:
+                # Same denomination: only deduplicate if heavy overlap (same physical note)
+                if iou > iou_threshold or containment > containment_threshold:
+                    overlaps_existing = True
+                    break
+            else:
+                # Different denominations: only deduplicate if almost identical box (> 70% IoU)
+                # Two distinct banknotes side-by-side or overlapping should NOT suppress each other
+                if iou > 0.70 or containment > 0.85:
+                    overlaps_existing = True
+                    break
 
         if not overlaps_existing:
             kept_boxes.append(cand)

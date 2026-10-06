@@ -27,9 +27,12 @@ dist/
 # Large Datasets & Training Runs (> 500MB)
 backend/data/images/
 backend/data/labels/
+backend/data/finetune_pack/
 runs/
 *.log
 
 # Large Model Weights (> 100MB - exceeds GitHub file size limit)
-models/best.pt
-models/best_downloaded.pt
+models/best*.pt
+models/*.pt
+!models/yolov8n.pt
+

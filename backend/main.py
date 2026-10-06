@@ -21,6 +21,7 @@ try:
         generate_audio_base64,
         VALID_BANKNOTE_NAMES,
         is_valid_banknote_geometry,
+        is_valid_banknote_color,
         deduplicate_boxes,
     )
 except ImportError:
@@ -30,6 +31,7 @@ except ImportError:
         generate_audio_base64,
         VALID_BANKNOTE_NAMES,
         is_valid_banknote_geometry,
+        is_valid_banknote_color,
         deduplicate_boxes,
     )
 
@@ -50,6 +52,7 @@ if not MODEL_PATH.exists():
     MODEL_PATH = BASE_DIR / "models" / "yolov8n.pt"
 
 model = YOLO(str(MODEL_PATH))
+print(f"Loaded YOLO model from {MODEL_PATH} ({MODEL_PATH.stat().st_size / 1e6:.1f} MB)", flush=True)
 
 @app.get("/")
 def read_root():
@@ -63,18 +66,19 @@ def read_root():
 async def predict_rupiah(file: UploadFile = File(...)):
     # 1. Read input image
     contents = await file.read()
-    image = Image.open(io.BytesIO(contents))
+    image = Image.open(io.BytesIO(contents)).convert("RGB")
     img_w, img_h = image.size
     
     # 2. Perform object detection with:
-    # - conf=0.84: strictly filters out facial/room/keyboard false alarms while detecting real banknotes (>0.90)
-    # - iou=0.35: tight bounding box overlap suppression
-    # - agnostic_nms=True: suppresses overlapping detections of different classes on the same note
+    # - conf=0.45: optimal threshold ensuring real banknotes (5k, 10k, 20k, 50k, 100k: conf 0.58-0.97)
+    #   detect crisply while eliminating background/room noise flickers (conf < 0.40)
+    # - iou=0.45: realistic overlap allowance for multiple banknotes in view
+    # - agnostic_nms=False: class-aware NMS allowing multiple different banknotes held together
     results = model(
         image,
-        conf=0.84,
-        iou=0.35,
-        agnostic_nms=True,
+        conf=0.45,
+        iou=0.45,
+        agnostic_nms=False,
         verbose=False
     )[0]
     
@@ -96,6 +100,12 @@ async def predict_rupiah(file: UploadFile = File(...)):
         if not is_valid_banknote_geometry(xyxy, img_w, img_h):
             continue
 
+        # 4. Color validation (reject monochrome wall, ceiling plaster, and background hallucinations)
+        crop_box = [max(0, int(xyxy[0])), max(0, int(xyxy[1])), min(img_w, int(xyxy[2])), min(img_h, int(xyxy[3]))]
+        if crop_box[2] > crop_box[0] and crop_box[3] > crop_box[1]:
+            if not is_valid_banknote_color(image.crop(crop_box)):
+                continue
+
         if hasattr(box, "xyxyn") and box.xyxyn is not None:
             xyxyn = [float(c) for c in box.xyxyn[0].tolist()]
         else:
@@ -113,8 +123,8 @@ async def predict_rupiah(file: UploadFile = File(...)):
             "box_normalized": [round(c, 4) for c in xyxyn],
         })
         
-    # 4. Spatial deduplication (NMS) to eliminate multiple boxes for the same physical banknote
-    final_boxes = deduplicate_boxes(candidate_boxes, iou_threshold=0.20, containment_threshold=0.40)
+    # 5. Spatial deduplication (NMS) allowing multiple distinct banknotes to be tracked simultaneously
+    final_boxes = deduplicate_boxes(candidate_boxes, iou_threshold=0.45, containment_threshold=0.70)
     detected_notes = [b["label"] for b in final_boxes]
 
     if detected_notes:

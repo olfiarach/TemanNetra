@@ -34,6 +34,7 @@ export default function App() {
   const pendingNotesRef = useRef(null);
   const lastAnnouncedSignatureRef = useRef(null);
   const lastAnnouncedTimeRef = useRef(0);
+  const lastWalletNotesRef = useRef([]);
   const isPlayingAudioRef = useRef(false);
   const scanStateRef = useRef('SEARCHING');
 
@@ -147,6 +148,8 @@ export default function App() {
 
       if (hasDetections) {
         consecutiveEmptyRef.current = 0;
+        // Update bounding boxes immediately so overlay tracks banknote in real-time
+        setBoundingBoxes(detectedBoxes);
 
         // Compute current detection signature
         const currentSig = [...detectedList].sort().join(',');
@@ -157,19 +160,16 @@ export default function App() {
           consecutiveMatchCountRef.current = 1;
         }
 
-        // Detection is confirmed if stable across 2 consecutive frames OR genuine high confidence (>= 0.88)
+        // Detection is confirmed if stable across 2 consecutive frames OR clear confidence (>= 0.65)
         const maxConf = Math.max(...detectedBoxes.map((b) => b.confidence || 0), 0);
-        const isConfirmed = consecutiveMatchCountRef.current >= 2 || maxConf >= 0.88;
+        const isConfirmed = consecutiveMatchCountRef.current >= 2 || maxConf >= 0.65;
 
         if (isConfirmed) {
-          // Continuously update bounding boxes so overlay tracks banknote movement
-          setBoundingBoxes(detectedBoxes);
-
           const now = Date.now();
           const isSameAsLast = currentSig === lastAnnouncedSignatureRef.current;
-          const isWithinLockout = now - lastAnnouncedTimeRef.current < 5000; // 5s lockout for same note
+          const isWithinLockout = now - lastAnnouncedTimeRef.current < 2500;
 
-          // Only announce if this is a newly detected note or previous note was cleared
+          // Announce if new note signature or previous note was cleared or lockout expired
           if (!isSameAsLast || !isWithinLockout || scanStateRef.current !== 'DETECTED') {
             lastAnnouncedSignatureRef.current = currentSig;
             lastAnnouncedTimeRef.current = now;
@@ -193,8 +193,22 @@ export default function App() {
               speakFallback(data.text);
             }
 
-            // Add to wallet tally once
-            addToWallet(detectedList);
+            // Calculate delta of new notes added to the frame
+            const prevTally = [...lastWalletNotesRef.current];
+            const notesToAdd = [];
+            for (const note of detectedList) {
+              const idx = prevTally.indexOf(note);
+              if (idx !== -1) {
+                prevTally.splice(idx, 1);
+              } else {
+                notesToAdd.push(note);
+              }
+            }
+
+            if (notesToAdd.length > 0) {
+              addToWallet(notesToAdd);
+              lastWalletNotesRef.current = [...detectedList];
+            }
           }
         }
       } else {
@@ -203,13 +217,14 @@ export default function App() {
         consecutiveMatchCountRef.current = 0;
         pendingNotesRef.current = null;
 
-        // Clear bounding boxes when note is absent for 2 cycles
+        // Clear bounding boxes and active session tally when absent for 2 cycles (~1.5s)
         if (consecutiveEmptyRef.current >= 2) {
           setBoundingBoxes([]);
+          lastWalletNotesRef.current = [];
         }
 
-        // Only reset to SEARCHING when note has genuinely been removed for >= 4 cycles (~3 seconds)
-        if (scanStateRef.current === 'DETECTED' && consecutiveEmptyRef.current >= 4) {
+        // Reset to SEARCHING state quickly when note is removed
+        if (scanStateRef.current === 'DETECTED' && consecutiveEmptyRef.current >= 2) {
           lastAnnouncedSignatureRef.current = null;
           setScanState('RESETTING');
           playChime('ready');
@@ -218,7 +233,7 @@ export default function App() {
           setTimeout(() => {
             setScanState('SEARCHING');
             setTranscript('Siap memindai uang berikutnya...');
-          }, 800);
+          }, 400);
         }
       }
     } catch (err) {
@@ -262,7 +277,7 @@ export default function App() {
 
         <div className="status-pill" title={isServerOnline ? 'API Terhubung' : 'API Tidak Terhubung'}>
           <span className={`status-dot ${isServerOnline ? 'online' : 'offline'}`} />
-          <span>{isServerOnline ? 'AI Aktif' : 'Offline'}</span>
+          <span>{isServerOnline ? 'Online' : 'Offline'}</span>
         </div>
       </header>
 

@@ -1,4 +1,4 @@
-path: /Users/floferno/Documents/TemanNetra/backend/data
+path: /Users/floferno/Documents/TemanNetra/backend/data/finetune_pack
 train: images/train
 val: images/val
 
