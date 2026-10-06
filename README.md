@@ -107,6 +107,7 @@ models/best.pt
 ```
 
 Without it, the application may start but is not expected to detect Rupiah banknotes correctly.
+There is no model download URL or training dataset in this repository. A fresh clone cannot obtain a working banknote detector without an external `best.pt` artifact or separately restored training data. Do not treat a successful backend health check as proof that detection works.
 
 ### 4. Start the backend
 
@@ -141,7 +142,7 @@ The frontend currently uses this fixed API URL:
 http://127.0.0.1:8000
 ```
 
-For a phone accessing Vite over a local network, this must be changed to the host computer's LAN address; `127.0.0.1` on the phone refers to the phone itself.
+For a phone accessing Vite over a local network, edit `API_BASE_URL` in `frontend/src/App.jsx` from `http://127.0.0.1:8000` to the host computer's LAN address, for example `http://192.168.1.20:8000`. Start Vite with its existing `host: '0.0.0.0'` setting, ensure the phone and computer share the same network, and allow the backend port through the host firewall. `127.0.0.1` on the phone refers to the phone itself.
 
 ## API
 
