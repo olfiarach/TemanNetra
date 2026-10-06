@@ -173,24 +173,20 @@ Response shape:
 
 ## Training
 
-There is no verified path from the base model to a first `best.pt`. In outline (**untested here**, dataset required), an initial run would be `yolo detect train model=models/yolov8n.pt data=backend/data/dataset.yaml`, followed by copying the resulting `weights/best.pt` to `models/best.pt`.
+Current `models/best.pt` is **YOLOv8x** (137 MB, trained at 416). Measured on an M-series Mac at 416: ~107 ms CPU / ~45 ms MPS per frame; `yolov8n` is ~13 ms / ~6 ms. Its stored val metrics (recall 1.0) come from an unknown, likely frame-leaky split and are not trusted.
 
-`backend/train_finetune.py` fine-tunes an existing `models/best.pt` using `backend/data/dataset_finetune.yaml` and writes the result under `runs/finetune_5k/`. It then copies the resulting `weights/best.pt` back to `models/best.pt`.
-
-Before training:
-
-1. Restore the ignored dataset directories.
-2. Fix the absolute `path:` value in the dataset YAML for the current machine.
-3. Confirm the seven class names and class ordering match the model labels.
-4. Keep a validation set separate from training images.
-5. Measure precision, recall, and per-denomination confusion before relying on the reader.
-
-Example:
+Retrain a nano/small model (untested here, dataset required):
 
 ```bash
-cd backend
-python train_finetune.py 5
+# 1. Set path: in backend/data/dataset.yaml; split by physical note + capture session.
+venv/bin/python backend/train.py backend/data/dataset.yaml models/yolov8n.pt 150   # or yolov8s.pt
+# 2. Gate on independent phone captures incl. no-note/hard-negative scenes:
+venv/bin/python backend/evaluate.py runs/banknote/weights/best.pt /path/to/heldout
+# 3. Only if FALSE SPOKEN = 0 and recall is acceptable:
+cp runs/banknote/weights/{best.pt,thresholds.json} models/
 ```
+
+`main.py` reads optional `models/thresholds.json` (per-class min confidence, default 0.45). A class with threshold 1.01 never speaks.
 
 ## Verification status
 
@@ -223,7 +219,8 @@ Not verified (blocked on real notes, a held-out dataset or the target phone):
 │   ├── main.py                # FastAPI API and YOLO inference
 │   ├── test_main.py           # Backend tests (fake detector)
 │   ├── requirements.txt
-│   ├── train_finetune.py      # Optional fine-tuning script
+│   ├── train.py               # Train nano/small detector
+│   ├── evaluate.py            # Held-out safety gate + thresholds.json
 │   └── utils.py               # Labels, validation, speech, and box filtering
 ├── frontend/
 │   ├── src/

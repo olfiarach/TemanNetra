@@ -1,4 +1,5 @@
 import io
+import json
 from functools import lru_cache
 import sys
 from contextlib import asynccontextmanager
@@ -40,14 +41,15 @@ MAX_IMAGE_PIXELS = 25_000_000  # ~25 MP; covers full-resolution phone photos
 # names map exactly onto the seven denominations. Otherwise MODEL_ERROR says why.
 MODEL = None
 CLASS_MAP = {}
+CLASS_THRESH = {}  # cls_id -> min confidence, from models/thresholds.json (evaluate.py)
 MODEL_ERROR = "Model has not been loaded"
 DEVICE = "cpu"
 IMGSZ = 416  # ponytail: matches the frontend frame size; retrain/benchmark before changing
 
 
 def load_model(path: Path = MODEL_PATH) -> None:
-    global MODEL, CLASS_MAP, MODEL_ERROR, DEVICE
-    MODEL, CLASS_MAP = None, {}
+    global MODEL, CLASS_MAP, CLASS_THRESH, MODEL_ERROR, DEVICE
+    MODEL, CLASS_MAP, CLASS_THRESH = None, {}, {}
     if not path.exists():
         MODEL_ERROR = f"{path.name} not found; the generic YOLO fallback is not a banknote detector"
         return
@@ -58,6 +60,9 @@ def load_model(path: Path = MODEL_PATH) -> None:
         DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         model = YOLO(str(path))
         CLASS_MAP = build_class_map(model.names)
+        thr_path = path.with_name("thresholds.json")
+        thr = json.loads(thr_path.read_text()) if thr_path.exists() else {}
+        CLASS_THRESH = {i: float(thr.get(str(n), 0.45)) for i, n in model.names.items()}
         model(Image.new("RGB", (IMGSZ, IMGSZ)), device=DEVICE, imgsz=IMGSZ, verbose=False)  # warm-up
         MODEL = model
         MODEL_ERROR = ""
@@ -133,6 +138,8 @@ async def predict_rupiah(file: UploadFile = File(...)):
             continue
 
         confidence = float(box.conf[0])
+        if confidence < CLASS_THRESH.get(int(box.cls[0]), 0.45):
+            continue
         xyxy = [float(c) for c in box.xyxy[0].tolist()]
 
         # 3. Geometric and size validation

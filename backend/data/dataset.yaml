@@ -1,4 +1,4 @@
-path: /Users/floferno/Documents/TemanNetra/backend/data
+path: /Users/heyrcg/Documents/Works/TemanNetra/backend/data  # per machine
 train: images/train
 val: images/val
 
