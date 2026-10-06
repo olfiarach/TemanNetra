@@ -69,12 +69,12 @@ The deployed page does not use the FastAPI backend. It remains the **reference i
 | | |
 |---|---|
 | Architecture | YOLOv8n, 416 px, 7 classes (6.2 MB `.pt`, 12 MB `.onnx`) |
-| Source | `https://github.com/olfiarach/TemanNetra/releases/download/v1.0.0/best.1.pt` (release `v1.0.0`) |
+| Source | `models/best.pt` (committed). Fine-tuned from release `v1.0.0` on extra folder-labelled photos pseudo-labelled by `backend/pseudo_label.py` |
 | SHA-256 | `a910b6976ac24ed3a7f74b6058060a3280436b2209ff885add4f0a47769311fe` |
 | Classes | `1000`, `2000`, `5000`, `10000`, `20000`, `50000`, `100000` |
 | Thresholds | `models/thresholds.json` (per-class minimum confidence; default 0.45; 1.01 means the class never speaks) |
 | Web export | `frontend/public/model/best.onnx` + `meta.json`, committed and built from the `.pt` above |
-| Date | 2026-10-06 |
+| Date | 2026-10-07 |
 
 A model is accepted only if its class **names** map exactly onto the seven denominations through `BANKNOTE_ALIAS_MAP`. Class order is never guessed. `models/best.pt` (6.2 MB) is committed; other `models/*.pt` files are Git-ignored except the generic `yolov8n.pt` (COCO base, not a banknote detector).
 
@@ -104,7 +104,6 @@ The model and speech clips are already in `frontend/public/`. No backend is need
 python3 -m venv venv
 venv/bin/pip install -r backend/requirements.txt onnx onnxruntime onnxslim
 
-curl -fL https://github.com/olfiarach/TemanNetra/releases/download/v1.0.0/best.1.pt -o models/best.pt
 echo "a910b6976ac24ed3a7f74b6058060a3280436b2209ff885add4f0a47769311fe  models/best.pt" | shasum -a 256 -c -
 
 ./run_backend.sh                         # API at http://127.0.0.1:8000

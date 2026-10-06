@@ -20,7 +20,7 @@ from backend.main import IMGSZ, MODEL_PATH  # noqa: E402
 from backend.utils import build_class_map  # noqa: E402
 
 OUT = BASE / "frontend" / "public"
-PT_SHA256 = "a910b6976ac24ed3a7f74b6058060a3280436b2209ff885add4f0a47769311fe"  # release v1.0.0
+PT_SHA256 = "a910b6976ac24ed3a7f74b6058060a3280436b2209ff885add4f0a47769311fe"  # models/best.pt (v1.0.0 fine-tuned, 2026-10-07)
 
 # Keep in sync with the literal say()/preloadSpeech phrases in frontend/src (scanLogic.js, App.jsx).
 # A missing phrase is not an error: the app falls back to the browser voice for it.
