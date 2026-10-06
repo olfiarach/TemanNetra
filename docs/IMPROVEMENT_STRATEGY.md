@@ -4,6 +4,8 @@
 
 A blind or low-vision user opens the app, points a camera at **one Rupiah banknote**, and hears its denomination promptly and reliably. The app must not confidently announce an uncertain or incorrect value. Wallet tally and multiple simultaneous notes are secondary.
 
+> **Update 2026-10-06:** the connection/deployment and speech gaps below are superseded. The app now runs the model in the browser and is hosted on GitHub Pages (see `docs/GITHUB_PAGES_DEPLOYMENT_DESIGN.md`); `models/best.pt` has a documented source (release `v1.0.0`, checksum in README). The accuracy, dataset and evaluation items still stand.
+
 **Status:** This is a plan, not a description of implemented improvements. The checked-in repo lacks the custom `models/best.pt` and training images, so banknote accuracy and end-to-end speech have not been established. A healthy API or a successful frontend build does not prove recognition.
 
 ## What exists today

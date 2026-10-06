@@ -1,168 +1,144 @@
 # TemanNetra
 
-TemanNetra is a prototype camera-based Indonesian Rupiah banknote reader for blind and low-vision users. It detects banknote denominations with YOLO, announces the result in Indonesian, provides audio and haptic feedback, and keeps a temporary in-browser wallet tally.
+TemanNetra is a prototype camera-based Indonesian Rupiah banknote reader for blind and low-vision users. It detects banknote denominations with YOLO **inside the browser**, announces the result in Indonesian, gives audio and haptic feedback, and keeps a temporary in-browser wallet tally.
 
-> **Prototype status:** recognition accuracy, speech latency and phone support are **not measured or verified**. No held-out evaluation set exists in this repository. `models/best.pt` is Git-ignored and its provenance is undocumented. The training dataset is not included. Do not rely on this app as assistive technology until the evaluation in `IMPROVEMENT_STRATEGY.md` is done.
+**Live demo:** `https://olfiarach.github.io/TemanNetra/` (GitHub Pages, no server)
+
+> **Prototype status:** recognition accuracy, speech latency and phone support are **not measured or verified**. No held-out evaluation set exists in this repository, and the training dataset is not included. Do not rely on this app as assistive technology, or as a way to verify money, until the evaluation in `docs/IMPROVEMENT_STRATEGY.md` is done.
 
 ## Features
 
 - Rear/front camera switching.
-- Frame capture about every 750 ms while scanning. A denomination is announced only after 3 consecutive matching single-note frames (thresholds are unmeasured defaults).
-- One note at a time: frames with several notes or conflicting denominations are treated as uncertain ("Nominal belum pasti, coba lagi") and never announced or counted.
-- Detection of these denominations:
-  - Rp1.000
-  - Rp2.000
-  - Rp5.000
-  - Rp10.000
-  - Rp20.000
-  - Rp50.000
-  - Rp100.000
-- Short Indonesian announcements ("Seratus ribu rupiah.") via the browser's `SpeechSynthesis`. New speech interrupts older speech. Playback failures are reported in the UI. Requires an Indonesian-capable voice on the device (unverified).
-- Distinct states: camera permission denied, camera unavailable, insecure context, server unreachable, model unavailable, audio unavailable. Scanning is disabled when the camera, server or model is not ready.
-- Last confirmed result stays visible; **Uji Suara** (test audio) and **Ulangi** (repeat) buttons.
-- Optional vibration; bounding-box overlay.
-- Temporary wallet tally (secondary; counts confirmed notes only).
+- Scanning runs continuously on frames while active. A denomination is announced only after 3 consecutive matching single-note frames. These thresholds are unmeasured defaults.
+- One note at a time. Frames with several notes, or with conflicting denominations, are treated as uncertain ("Nominal belum pasti, coba lagi") and are never announced or counted.
+- Supported denominations: Rp1.000, Rp2.000, Rp5.000, Rp10.000, Rp20.000, Rp50.000 and Rp100.000.
+- Short Indonesian announcements ("Seratus ribu rupiah."):
+  - Fixed phrases play pre-generated gTTS clips (`frontend/public/tts/`), so the accent does not depend on the device.
+  - Other speech, such as the wallet total, uses the browser's `SpeechSynthesis`.
+  - New speech interrupts older speech, and playback failures are shown in the UI.
+- Distinct states for: camera permission denied, camera unavailable, insecure context, model still loading, model download failed, model unavailable, and audio unavailable. Scanning is disabled unless both the camera and the model are ready.
+- The last confirmed result stays visible. **Uji Suara** tests the audio and **Ulangi** repeats the result.
+- Optional vibration and a bounding-box overlay.
+- Temporary wallet tally. This is secondary and counts confirmed notes only.
 
 ## Architecture
 
 ```text
-Camera
-  │
-  ▼
-React/Vite frontend :5173
-  │  relative /health and /predict (Vite proxy in dev)
-  ▼
-FastAPI backend :8000
-  │
-  ├─ YOLO inference
-  ├─ label, geometry, color, and duplicate filtering
-  ├─ Indonesian response text
-  │
-  ▼
-Frontend confirmation, SpeechSynthesis, haptics, overlay, wallet tally
+GitHub Pages (static files over HTTPS)
+  index.html + JS bundle
+  model/best.onnx, model/meta.json     <- backend/export_web.py
+  tts/*.mp3                            <- backend/export_web.py
+        │
+        ▼
+Phone browser
+  Camera ─► ScannerView (frame ≤416 px, RGBA)
+        ─► utils/detector.js
+             onnxruntime-web (wasm) YOLOv8n @416
+             per-class NMS, per-class thresholds, geometry, colour, dedup
+        ─► utils/scanLogic.js (3-frame confirmation)
+        ─► speech, haptics, overlay, wallet tally
 ```
 
-### Frontend
+Camera frames never leave the device. The onnxruntime wasm binaries load from jsDelivr, pinned to the installed version.
 
-`frontend/src/App.jsx` owns the scan loop and detection state. `ScannerView` captures camera frames. The confirmation logic is in `frontend/src/utils/scanLogic.js`; speech in `utils/soundEffects.js`. The frontend accepts only the seven canonical labels and sends one frame at a time.
+### Frontend (`frontend/`)
 
-The wallet is held only in React state. Reloading the page or closing the browser clears it.
+- `src/App.jsx` loads the model once at startup and owns the scan loop and detection state.
+- `components/ScannerView.jsx` captures frames.
+- `utils/detector.js` is a port of the backend's `/predict` pipeline.
+- `utils/scanLogic.js` holds the confirmation logic.
+- `utils/soundEffects.js` handles speech.
 
-### Backend
+The wallet lives only in React state, so reloading or closing the page clears it.
 
-`backend/main.py` exposes:
+### Backend (`backend/`): development, training and evaluation only
 
-- `GET /health` — `{"status": "ready" | "model_unavailable", "model_ready": bool, "reason": str}`.
-- `POST /predict` — multipart `file` (max 5 MB, max 25 megapixels). Returns detections and boxes. `503` when the model is unavailable, `400` for invalid images, `413` for oversized input.
+The deployed page does not use the FastAPI backend. It remains the **reference implementation** that the browser detector is checked against, and the home of the training and evaluation tools.
 
-There is no CORS middleware; the UI is expected to be same-origin.
+- `main.py` exposes:
+  - `GET /health`
+  - `POST /predict`: multipart `file`, max 5 MB and 25 megapixels. It returns `503` when the model is unavailable, `400` for an invalid image and `413` for oversized input. It also has a per-process limit of 30 requests per 10 s for each client IP, which returns `429`.
+  - It also serves `frontend/dist` when that folder exists.
+- `utils.py` holds the label aliases, `build_class_map`, the geometry and colour checks, and duplicate suppression.
+- `export_web.py` builds the browser assets: the ONNX model, `meta.json` and the speech clips.
+- `web_parity.py` checks the JS detector against `/predict`.
+- `train.py` and `evaluate.py` train a model and run the held-out safety gate.
 
-`backend/utils.py` contains label aliases, `build_class_map`, geometry/color validation, duplicate suppression, and the text formatter.
+## Model
 
-## Model requirement
+| | |
+|---|---|
+| Architecture | YOLOv8n, 416 px, 7 classes (6.2 MB `.pt`, 12 MB `.onnx`) |
+| Source | `https://github.com/olfiarach/TemanNetra/releases/download/v1.0.0/best.1.pt` (release `v1.0.0`) |
+| SHA-256 | `25d4a14f575b514c392da83698787cad5806b55df4da008eaa3838a493133a91` |
+| Classes | `1000`, `2000`, `5000`, `10000`, `20000`, `50000`, `100000` |
+| Thresholds | `models/thresholds.json` (per-class minimum confidence; default 0.45; 1.01 means the class never speaks) |
+| Web export | `frontend/public/model/best.onnx` + `meta.json`, committed and built from the `.pt` above |
+| Date | 2026-10-06 |
 
-At startup the backend loads **only** `models/best.pt`. The generic `yolov8n.pt` is not used for detection. The backend accepts the model only if its class **names** map exactly onto the seven denominations through `BANKNOTE_ALIAS_MAP` (for example `1000`, `10000`, `100000`, `2000`, `20000`, `5000`, `50000`, or `1k`..`100k`). Class order is never guessed. If the file is missing or incompatible, `/health` reports `model_unavailable` and the app disables scanning.
+A model is accepted only if its class **names** map exactly onto the seven denominations through `BANKNOTE_ALIAS_MAP`. Class order is never guessed. `models/best.pt` (6.2 MB) is committed; other `models/*.pt` files are Git-ignored except the generic `yolov8n.pt` (COCO base, not a banknote detector).
 
-`models/best.pt` is ignored by Git. There is no download URL, no training recipe that produces it from scratch, and no dataset in this repository. The checked-in `yolov8n.pt` is only the generic COCO base.
+Its stored validation metrics come from an unknown split that is likely leaky, so they are not trusted.
 
 ## Requirements
 
-- Python 3.9+ recommended.
-- Node.js and npm.
+- Node.js 20+ and npm, for the frontend.
+- Python 3.9+, only for the backend, the model export and training.
 - A browser with camera permission, served from `localhost` or HTTPS.
-- A trained `models/best.pt` (see above).
-- Backend dependencies from `backend/requirements.txt`.
 
 ## Local development
 
-### 1. Install frontend dependencies
+### Frontend only (what the deployed site runs)
 
 ```bash
 cd frontend
 npm ci
+npm run dev        # http://localhost:5173
 ```
 
-### 2. Install backend dependencies
+The model and speech clips are already in `frontend/public/`. No backend is needed.
 
-Use a virtual environment rather than installing into the system Python:
+### Backend (reference API, export, training)
 
 ```bash
-cd backend
 python3 -m venv venv
-. venv/bin/activate
-pip install -r requirements.txt
-cd ..
-```
+venv/bin/pip install -r backend/requirements.txt onnx onnxruntime onnxslim
 
-PyTorch and Ultralytics may require a platform-specific installation choice. Follow their installation guidance if the generic requirements installation does not select a usable build.
-
-### 3. Restore the model
-
-Download the deployed artifact into `models/best.pt`:
-
-```bash
 curl -fL https://github.com/olfiarach/TemanNetra/releases/download/v1.0.0/best.1.pt -o models/best.pt
 echo "25d4a14f575b514c392da83698787cad5806b55df4da008eaa3838a493133a91  models/best.pt" | shasum -a 256 -c -
-```
 
-Without a compatible model the app starts but reports `model unavailable` and cannot scan.
-
-### 4. Start the backend
-
-From the repository root:
-
-```bash
-./run_backend.sh
-```
-
-The script uses `backend/venv/bin/python` when available, otherwise `venv/bin/python`, then falls back to `python3`. It starts the API at `http://127.0.0.1:8000`.
-
-To check it:
-
-```bash
+./run_backend.sh                         # API at http://127.0.0.1:8000
 curl http://127.0.0.1:8000/health
 ```
 
-### 5. Start the frontend
+PyTorch and Ultralytics may need a platform-specific install. Follow their own guidance if the generic install doesn't give you a usable build.
 
-In another terminal:
-
-```bash
-cd frontend
-npm run dev
-```
-
-Open the printed Vite URL, normally `http://localhost:5173`.
-
-The frontend calls relative `/health` and `/predict`. In development, Vite forwards them to `http://127.0.0.1:8000` (`frontend/vite.config.js`). The same applies to `npm run preview`.
-
-### Deployment: GitHub Pages (browser-only)
-
-The public demo has no server. The browser downloads the model once (about 12 MB, then cached) and runs detection on the phone with `onnxruntime-web`. Camera frames never leave the device. Design: `docs/GITHUB_PAGES_DEPLOYMENT_DESIGN.md`.
-
-| Model artifact | Value |
-|---|---|
-| Source | `https://github.com/olfiarach/TemanNetra/releases/download/v1.0.0/best.1.pt` (release `v1.0.0`) |
-| SHA-256 | `25d4a14f575b514c392da83698787cad5806b55df4da008eaa3838a493133a91` |
-| Classes | `1000`, `2000`, `5000`, `10000`, `20000`, `50000`, `100000` |
-| Date | 2026-10-06 |
-| Web export | `frontend/public/model/best.onnx` + `meta.json` (labels, per-class thresholds) |
-
-Rebuild the web assets after changing the model, thresholds, or spoken phrases, then check them against the Python pipeline:
+### Updating the model, thresholds or spoken phrases
 
 ```bash
-venv/bin/python backend/export_web.py    # ONNX + meta.json + gTTS clips in frontend/public/
-venv/bin/python backend/web_parity.py    # JS detector vs FastAPI /predict on the sample images
+venv/bin/python backend/export_web.py    # rewrites frontend/public/model/* and tts/*
+venv/bin/python backend/web_parity.py    # must print OK for every sample
 ```
 
-Deploy: on GitHub, go to **Settings → Pages → Source: GitHub Actions**, then push to `main` or `revamp/improvement` (allow that branch under **Settings → Environments → github-pages**), or run the **Deploy to GitHub Pages** workflow manually). The site is published at `https://olfiarach.github.io/TemanNetra/`.
+- `export_web.py` refuses to run unless `models/best.pt` matches the checksum in the script. Update `PT_SHA256` there, and the Model table above, when you release a new artifact.
+- When you add a fixed phrase to the frontend, also add it to `PHRASES` in `export_web.py`. A phrase missing from that list still works, but falls back to the browser voice.
 
-- Detection speed depends on the phone, and the first visit needs a network connection. Neither has been measured on real devices yet.
-- Fixed phrases play pre-generated Indonesian clips (`frontend/public/tts/`). Anything else, such as the wallet total, uses the phone's own voice.
-- The FastAPI backend (`/predict`, `Dockerfile`) remains for local development, training and evaluation. The deployed page does not use it.
-- Experimental demo only: not for verifying banknotes.
+## Deployment (GitHub Pages)
 
-## API
+`.github/workflows/pages.yml` runs `npm ci`, `npm test` and `npm run build`. It fails if `dist/model/best.onnx` is missing, then publishes `frontend/dist`.
+
+One-time setup:
+
+1. In the repo, go to **Settings → Pages → Source** and choose **GitHub Actions**.
+2. If you deploy from a branch other than `main`, go to **Settings → Environments → github-pages → Deployment branches and tags** and add that branch. The workflow triggers on `main` and `revamp/improvement`.
+
+Then push to one of those branches, or run **Deploy to GitHub Pages** from the **Actions** tab. The site is served at `https://olfiarach.github.io/TemanNetra/`. Vite uses `base: './'`, so it works under the `/TemanNetra/` path.
+
+Rollback: re-run the workflow on an earlier commit, or revert the commit.
+
+Design notes: `docs/GITHUB_PAGES_DEPLOYMENT_DESIGN.md`.
+
+## Backend API (reference)
 
 ### `GET /health`
 
@@ -172,37 +148,26 @@ Deploy: on GitHub, go to **Settings → Pages → Source: GitHub Actions**, then
 
 ### `POST /predict`
 
-Send a multipart form upload with the field name `file`:
-
 ```bash
-curl -X POST \
-  -F "file=@models/test_detected_100k.jpg" \
-  http://127.0.0.1:8000/predict
+curl -F "file=@models/test_detected_100k.jpg" http://127.0.0.1:8000/predict
 ```
-
-Response shape:
 
 ```json
 {
   "text": "Terdeteksi satu lembar Seratus Ribu Rupiah.",
   "detections": ["Seratus Ribu"],
   "boxes": [
-    {
-      "label": "Seratus Ribu",
-      "confidence": 0.91,
-      "box_2d": [10, 20, 500, 400],
-      "box_normalized": [0.02, 0.04, 0.87, 0.92]
-    }
+    {"label": "Seratus Ribu", "confidence": 0.91, "box_2d": [10, 20, 500, 400], "box_normalized": [0.02, 0.04, 0.87, 0.92]}
   ],
   "image_size": {"width": 577, "height": 433}
 }
 ```
 
+`detect()` in `frontend/src/utils/detector.js` returns the same `boxes` shape.
+
 ## Training
 
-Current `models/best.pt` is **YOLOv8x** (137 MB, trained at 416). Measured on an M-series Mac at 416: ~107 ms CPU / ~45 ms MPS per frame; `yolov8n` is ~13 ms / ~6 ms. Its stored val metrics (recall 1.0) come from an unknown, likely frame-leaky split and are not trusted.
-
-Retrain a nano/small model (untested here, dataset required):
+Retraining has not been tested here, and it needs the dataset:
 
 ```bash
 # 1. Set path: in backend/data/dataset.yaml; split by physical note + capture session.
@@ -211,54 +176,59 @@ venv/bin/python backend/train.py backend/data/dataset.yaml models/yolov8n.pt 150
 venv/bin/python backend/evaluate.py runs/banknote/weights/best.pt /path/to/heldout
 # 3. Only if FALSE SPOKEN = 0 and recall is acceptable:
 cp runs/banknote/weights/{best.pt,thresholds.json} models/
+# 4. Publish: new GitHub release asset + checksum, then export_web.py and web_parity.py (above).
 ```
 
-`main.py` reads optional `models/thresholds.json` (per-class min confidence, default 0.45). A class with threshold 1.01 never speaks.
+Keep the model small. The browser runs it on the phone's CPU through wasm with one thread.
 
 ## Verification status
 
-Run in this checkout:
+Run in this checkout (2026-10-06):
 
-- `venv/bin/python -m unittest backend.test_main` — class mapping, readiness, upload bounds, no CORS (fake detector).
-- `cd frontend && npm test` — confirmation state machine and speech serialization/failure handling (mocked `SpeechSynthesis`).
-- `cd frontend && npm run build`.
-- Smoke: with the local `best.pt`, `/predict` through the Vite proxy returned a plausible label for the three sample photos in `models/`. This is a smoke check, not an accuracy measurement.
+- `venv/bin/python -m unittest backend.test_main`: 10 tests covering class mapping, readiness, upload bounds and no CORS, using a fake detector.
+- `cd frontend && npm test`: 12 tests covering the confirmation state machine and speech serialization, using a mocked `SpeechSynthesis`.
+- `cd frontend && npm run build`, and a static serve of `dist/` that returns the model, `meta.json` and the speech clips.
+- `backend/web_parity.py`: the JS detector matches the backend pipeline on the same ONNX model for all 3 sample photos, with labels exact and scores and boxes within 0.01.
+- Compared with the PyTorch `.pt`, the ONNX scores are up to about 0.06 lower on the samples, because the input padding differs (416×416 vs 416×320). The labels match.
 
-Not verified (blocked on real notes, a held-out dataset or the target phone):
+Not verified, because it needs real notes, a held-out dataset or the target phones:
 
-- Recognition accuracy, false announcements on no-note scenes, threshold choice.
-- Capture-to-speech latency, Indonesian voice availability and quality, screen-reader interaction.
-- Phone camera/HTTPS setup.
-- Training, and container deployment (`backend/Dockerfile` is empty).
+- Recognition accuracy, false announcements on no-note scenes, and the choice of thresholds.
+- On-device model load time, time per frame, and how phones cope thermally with continuous scanning.
+- The camera-to-speech flow on the deployed Pages site, on iOS Safari and Android Chrome.
+- Voice quality, and how it works with a screen reader.
 
-## Security and privacy notes
+## Security and privacy
 
-- Camera frames are sent to the local FastAPI server for inference and are not stored or logged. No external speech service is used.
-- Uploads are capped (5 MB, 25 megapixels). The API has no authentication or rate limiting.
-- Treat results as assistive suggestions, not financial verification. Test extensively across lighting, angles, occlusion, damaged notes, and cluttered backgrounds before real-world use.
+- On the deployed site, detection runs entirely in the browser. Camera frames are never uploaded, stored or logged.
+- The site loads static files from GitHub Pages, plus the onnxruntime wasm from jsDelivr. There are no analytics and no accounts.
+- The local backend API has no authentication. Do not expose it publicly; its upload caps and rate limit reduce abuse but do not secure it.
+- Treat results as assistive suggestions, not financial verification.
 
 ## Repository layout
 
 ```text
 .
+├── .github/workflows/pages.yml   # Build + deploy to GitHub Pages
 ├── backend/
-│   ├── data/                  # Dataset YAML files; image data is not committed
-│   ├── main.py                # FastAPI API and YOLO inference
-│   ├── test_main.py           # Backend tests (fake detector)
-│   ├── requirements.txt
-│   ├── train.py               # Train nano/small detector
-│   ├── evaluate.py            # Held-out safety gate + thresholds.json
-│   └── utils.py               # Labels, validation, speech, and box filtering
+│   ├── main.py                   # Reference FastAPI API and YOLO inference
+│   ├── utils.py                  # Labels, validation, box filtering
+│   ├── export_web.py             # .pt -> ONNX + meta.json + speech clips
+│   ├── web_parity.py             # JS detector vs /predict check
+│   ├── train.py / evaluate.py    # Training and held-out safety gate
+│   ├── test_main.py
+│   └── requirements.txt
 ├── frontend/
-│   ├── src/
-│   │   ├── App.jsx
-│   │   ├── components/
-│   │   └── utils/
-│   ├── package.json
+│   ├── public/model/             # best.onnx, meta.json (committed)
+│   ├── public/tts/               # Pre-generated Indonesian clips
+│   ├── scripts/parity.mjs        # Node side of the parity check
+│   ├── src/                      # App.jsx, components/, utils/ (detector, scanLogic, soundEffects)
 │   └── vite.config.js
 ├── models/
-│   ├── yolov8n.pt             # Generic COCO base (not a banknote detector)
-│   └── test_detected_*.jpg    # Sample images
-├── run_backend.sh
-└── README.md
+│   ├── thresholds.json           # Per-class confidence thresholds
+│   ├── yolov8n.pt                # Generic COCO base (not a banknote detector)
+│   └── test_detected_*.jpg       # Sample images
+├── docs/
+├── Dockerfile                    # Optional: container with backend + built UI (not used by the Pages deploy)
+└── run_backend.sh
 ```

@@ -211,3 +211,15 @@ The biggest likely gain is not a newer architecture. It is **better representati
 ## Deferred scope
 
 Counterfeit detection, multi-note counting, and on-device model redesign should wait until the one-note task has measured evidence.
+
+## Shipping a new model to the web app
+
+The deployed app runs the model in the browser (onnxruntime-web, wasm, one thread), so model size directly affects phone load time and time per frame. Prefer nano or small models at 416 px.
+
+After a model passes the acceptance criterion:
+
+1. Publish `best.pt` as a GitHub release asset and record its SHA-256 in the README.
+2. Update `PT_SHA256` in `backend/export_web.py`.
+3. Run `backend/export_web.py`, then `backend/web_parity.py`. Every sample must print `OK`.
+4. Commit `frontend/public/model/*` and push. The Pages workflow deploys it.
+

@@ -23,12 +23,12 @@ It announces a note only after 3 consecutive matching single-note frames. Multip
 
 ## Operating Context
 - Phone held in one hand and the note in the other, at shops and markets, in varied and often poor light.
-- Frames are captured about every 750 ms while scanning. Speech uses the browser's `SpeechSynthesis` with an Indonesian voice, plus optional vibration.
-- Same-origin React/Vite frontend and FastAPI/YOLO backend (`/health`, `/predict`).
+- Frames are processed continuously while scanning. Fixed phrases play pre-generated Indonesian clips; other speech uses the browser's `SpeechSynthesis`. Optional vibration.
+- Static React/Vite app on GitHub Pages; YOLOv8n runs in the browser (onnxruntime-web). Frames never leave the phone. The FastAPI backend is a development/reference tool only.
 
 ## Capabilities and Constraints
 - Denominations: Rp1.000, 2.000, 5.000, 10.000, 20.000, 50.000, 100.000.
-- Required states: camera permission denied, camera unavailable, insecure context, server unreachable, model unavailable, audio unavailable. Scanning is disabled unless the camera, server and model are ready.
+- Required states: camera permission denied, camera unavailable, insecure context, model loading, model download failed, model unavailable, audio unavailable. Scanning is disabled unless the camera and model are ready.
 - Controls: start/stop scan, switch camera, **Uji Suara** (test audio), **Ulangi** (repeat last result). The last confirmed result stays visible. Optional bounding-box overlay.
 - Must stay a browser web app, with no native build.
 - **Open:** the wallet tally is secondary and not a commitment, so a redesign may drop it.

@@ -35,4 +35,5 @@ runs/
 models/best*.pt
 models/*.pt
 !models/yolov8n.pt
+!models/best.pt
 
