@@ -98,7 +98,14 @@ PyTorch and Ultralytics may require a platform-specific installation choice. Fol
 
 ### 3. Restore the model
 
-Place the trained model at `models/best.pt`. Without a compatible model the app starts but reports `model unavailable` and cannot scan.
+Download the deployed artifact into `models/best.pt`:
+
+```bash
+curl -fL https://github.com/olfiarach/TemanNetra/releases/download/v1.0.0/best.1.pt -o models/best.pt
+echo "25d4a14f575b514c392da83698787cad5806b55df4da008eaa3838a493133a91  models/best.pt" | shasum -a 256 -c -
+```
+
+Without a compatible model the app starts but reports `model unavailable` and cannot scan.
 
 ### 4. Start the backend
 
@@ -133,7 +140,22 @@ The frontend calls relative `/health` and `/predict`. In development, Vite forwa
 
 - **Verified:** same computer, `http://localhost:5173`. The page loads, the camera is acquired and `/health` and `/predict` work through the proxy. Speech from a real banknote through the camera was not tested.
 - **Not verified:** phone use. The dev server now listens on localhost only. Browsers require a secure context for the camera, so a plain `http://<LAN-IP>:5173` URL is not expected to work. A phone needs an HTTPS origin that serves the built frontend and forwards `/health` and `/predict` to the local FastAPI process (for example through a reverse proxy). That setup is not provided or tested here.
-- Do not expose the API publicly: it has no authentication or rate limiting.
+- Do not expose the API publicly without the Render setup below: it has no authentication; `/predict` has only a per-process rate limit (30 requests / 10 s per client IP).
+
+### Render free-tier deployment
+
+One Docker Web Service (root `Dockerfile`) serves the built UI and the API from one HTTPS origin. Design: `docs/RENDER_FREE_TIER_DEPLOYMENT_DESIGN.md`.
+
+| Model artifact | Value |
+|---|---|
+| Source | `https://github.com/olfiarach/TemanNetra/releases/download/v1.0.0/best.1.pt` (release `v1.0.0`) |
+| SHA-256 | `25d4a14f575b514c392da83698787cad5806b55df4da008eaa3838a493133a91` |
+| Classes | `1000`, `2000`, `5000`, `10000`, `20000`, `50000`, `100000` |
+| Date | 2026-10-06 |
+
+Render settings: Runtime **Docker**, Instance **Free**, Health Check Path `/health`, environment variables `MODEL_URL` and `MODEL_SHA256` (values above). The build fails if either is missing or the checksum does not match.
+
+The free service sleeps after 15 minutes idle; the first request wakes it (about a minute) and the UI shows "Server sedang memulai". Experimental demo only: not for verifying banknotes.
 
 ## API
 
