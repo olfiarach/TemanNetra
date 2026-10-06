@@ -75,3 +75,30 @@ export function stepConfirmation(prev, labels) {
   }
   return { state: s, event: null };
 }
+
+// ponytail: size/center thresholds are unmeasured defaults; tune on-device.
+export const LOST_FRAMES = 8; // ~6 s of empty frames before "belum terlihat"
+export const GUIDANCE = {
+  multiple: 'Ada lebih dari satu uang. Tunjukkan satu lembar saja.',
+  far: 'Terlalu jauh. Dekatkan uang ke kamera.',
+  near: 'Terlalu dekat. Jauhkan sedikit.',
+  offCenter: 'Geser uang ke tengah kamera.',
+  lost: 'Uang belum terlihat. Arahkan uang ke kamera.',
+};
+
+/**
+ * Spoken framing hint for the current frame, or null when framing looks fine.
+ * boxes: [{ label, box_normalized: [x1,y1,x2,y2] }]; state: confirmation state after this frame.
+ */
+export function guidanceFor(boxes, state) {
+  if (boxes.length > 1) return GUIDANCE.multiple;
+  if (boxes.length === 0) return state.absent >= LOST_FRAMES && state.absent % LOST_FRAMES === 0 ? GUIDANCE.lost : null;
+  if (boxes[0].label === state.confirmed) return null; // already announced, framing is good enough
+  const [x1, y1, x2, y2] = boxes[0].box_normalized || [];
+  if (x1 === undefined) return null;
+  const area = (x2 - x1) * (y2 - y1);
+  if (area < 0.08) return GUIDANCE.far;
+  if (area > 0.6) return GUIDANCE.near;
+  if (Math.abs((x1 + x2) / 2 - 0.5) > 0.25 || Math.abs((y1 + y2) / 2 - 0.5) > 0.25) return GUIDANCE.offCenter;
+  return null;
+}

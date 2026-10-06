@@ -3,12 +3,13 @@ import { Volume2, Play, Pause, Banknote, Headphones, CheckCircle2, AlertTriangle
 import ScannerView, { CAMERA_MESSAGES } from './components/ScannerView';
 import StatusBanner from './components/StatusBanner';
 import WalletSummary from './components/WalletSummary';
-import { speak, playChime, triggerHaptic } from './utils/soundEffects';
-import { NOMINAL_VALUES, speechFor, initialConfirmation, stepConfirmation } from './utils/scanLogic';
+import { speak, isSpeaking, playChime, triggerHaptic } from './utils/soundEffects';
+import { NOMINAL_VALUES, speechFor, initialConfirmation, stepConfirmation, guidanceFor } from './utils/scanLogic';
 
 // Relative URLs: the UI and API share one origin (Vite proxy in dev, reverse proxy in deployment).
 const FRAME_INTERVAL_MS = 750;
 const REQUEST_TIMEOUT_MS = 8000;
+const GUIDANCE_GAP_MS = 3000; // min gap between spoken framing hints
 const UNCERTAIN_PROMPT = 'Nominal belum pasti, coba lagi';
 
 const SERVER_LABELS = {
@@ -34,6 +35,7 @@ export default function App() {
   const isProcessingRef = useRef(false);
   const isScanningRef = useRef(false);
   const confirmationRef = useRef(initialConfirmation());
+  const lastGuidanceRef = useRef({ text: '', at: 0 });
 
   const canScan = cameraStatus === 'ready' && serverStatus === 'ready';
 
@@ -166,6 +168,17 @@ export default function App() {
       );
       confirmationRef.current = state;
       if (event) handleEvent(event);
+      else {
+        // Spoken framing hint; throttled and never cuts off a result announcement
+        const tip = guidanceFor(boxes, state);
+        const last = lastGuidanceRef.current;
+        const now = Date.now();
+        if (tip && !isSpeaking() && now - last.at > (tip === last.text ? 2 * GUIDANCE_GAP_MS : GUIDANCE_GAP_MS)) {
+          lastGuidanceRef.current = { text: tip, at: now };
+          setHint(tip);
+          say(tip);
+        } else if (!tip && boxes.length === 0) setHint('');
+      }
     } catch (err) {
       console.warn('Frame processing error:', err.name);
     } finally {
@@ -196,8 +209,9 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1 className="brand-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <Banknote size={28} aria-hidden="true" /> TemanNetra
+        <h1 className="brand-title">
+          <span className="brand-mark" aria-hidden="true"><Banknote size={24} /></span>
+          Teman<span>Netra</span>
         </h1>
         <div className={`server-status ${serverClass}`}>
           <ServerIcon size={20} aria-hidden="true" />
@@ -218,8 +232,8 @@ export default function App() {
         <p className="result-caption">Hasil terakhir</p>
         {lastResult ? (
           <>
-            <p className="result-amount">{formatRupiah(noteValue)}</p>
-            <p className="result-words">{lastResult.label} Rupiah</p>
+            <p className="result-amount" key={noteValue}>{formatRupiah(noteValue)}</p>
+            <p className="result-words" key={`w${noteValue}`}>{lastResult.label} Rupiah</p>
           </>
         ) : (
           <p className="result-amount is-empty">Belum ada hasil</p>

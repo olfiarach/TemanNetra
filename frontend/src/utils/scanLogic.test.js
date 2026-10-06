@@ -54,3 +54,17 @@ test('no note produces nothing; unknown labels are ignored', () => {
   assert.deepEqual(run(rep([], 20)), []);
   assert.deepEqual(run(rep(['person'], 20)), []);
 });
+
+test('guidance hints for framing problems', async () => {
+  const { guidanceFor, GUIDANCE, LOST_FRAMES } = await import('./scanLogic.js');
+  const s = initialConfirmation();
+  const b = (n) => ({ label: 'Lima Ribu', box_normalized: n });
+  assert.equal(guidanceFor([b([0.4, 0.4, 0.5, 0.5])], s), GUIDANCE.far);
+  assert.equal(guidanceFor([b([0, 0, 0.95, 0.9])], s), GUIDANCE.near);
+  assert.equal(guidanceFor([b([0, 0.3, 0.4, 0.7])], s), GUIDANCE.offCenter);
+  assert.equal(guidanceFor([b([0.2, 0.25, 0.8, 0.75])], s), null);
+  assert.equal(guidanceFor([b([0.4, 0.4, 0.5, 0.5])], { ...s, confirmed: 'Lima Ribu' }), null);
+  assert.equal(guidanceFor([b([0.2, 0.2, 0.4, 0.4]), b([0.6, 0.6, 0.8, 0.8])], s), GUIDANCE.multiple);
+  assert.equal(guidanceFor([], { ...s, absent: LOST_FRAMES }), GUIDANCE.lost);
+  assert.equal(guidanceFor([], { ...s, absent: LOST_FRAMES + 1 }), null);
+});
