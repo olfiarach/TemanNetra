@@ -5,8 +5,9 @@
 Writes into frontend/public/:
   model/best.onnx  - models/best.pt exported for onnxruntime-web (imgsz 416)
   model/meta.json  - class labels and per-class thresholds by class index
-  tts/<slug>.mp3   - gTTS audio for the app's fixed phrases (anything else uses the browser voice)
+  tts/<slug>.mp3  - Edge TTS Indonesian neural voice clips (anything else uses the browser voice)
 """
+import asyncio
 import hashlib
 import json
 import re
@@ -46,8 +47,19 @@ def slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
+async def generate_tts(phrases: list[str], output_dir: Path) -> None:
+    import edge_tts
+
+    for text in phrases:
+        output = output_dir / f"{slug(text)}.mp3"
+        await edge_tts.Communicate(
+            text,
+            voice="id-ID-GadisNeural",
+            rate="-8%",
+        ).save(str(output))
+
+
 def main() -> None:
-    from gtts import gTTS
     from ultralytics import YOLO
 
     digest = hashlib.sha256(MODEL_PATH.read_bytes()).hexdigest()
@@ -70,8 +82,7 @@ def main() -> None:
     (OUT / "model" / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
 
     (OUT / "tts").mkdir(exist_ok=True)
-    for text in PHRASES:
-        gTTS(text=text, lang="id").save(str(OUT / "tts" / f"{slug(text)}.mp3"))
+    asyncio.run(generate_tts(PHRASES, OUT / "tts"))
     print(f"Wrote model ({onnx_path.stat().st_size / 1e6:.1f} MB) and {len(PHRASES)} phrases to {OUT}")
 
 

@@ -2,4 +2,4 @@ ultralytics
 torch
 torchvision
 pillow
-gTTS
+edge-tts
