@@ -114,11 +114,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .splash-content { width: min(100%, 400px); transition: opacity 250ms var(--ease), transform 400ms var(--ease); }
 .splash.is-leaving { opacity: 0; pointer-events: none; }
 .splash.is-leaving .splash-content { opacity: 0; transform: translateY(-8px) scale(0.97); }
-.splash-mark { width: 64px; height: 64px; border-radius: var(--radius); animation: breathe 1.2s linear infinite alternate; }
+.splash-mark { width: 96px; height: 96px; }
 .splash h2 { margin: 24px 0 4px; font-size: clamp(2rem, 9vw, 3rem); line-height: 1.1; }
 .splash p { margin: 8px 0; }
 .splash p:last-child { color: var(--ink-2); font-size: var(--fs-sm); }
-@keyframes breathe { to { opacity: 0.55; } }
 
 /* ---------- Header ---------- */
 .app-header {
@@ -139,15 +138,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   letter-spacing: -0.02em;
 }
 .brand-title span { font-weight: 400; }
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--accent);
-  color: var(--accent-fg);
-}
+.brand-mark { display: block; width: 40px; height: 40px; flex: none; }
 .server-status {
   display: inline-flex;
   align-items: center;

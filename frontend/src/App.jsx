@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Volume2, Play, Pause, Banknote, Headphones, CheckCircle2, AlertTriangle, Loader } from 'lucide-react';
+import { Volume2, Play, Pause, Headphones, CheckCircle2, AlertTriangle, Loader } from 'lucide-react';
 import ScannerView, { CAMERA_MESSAGES } from './components/ScannerView';
 import StatusBanner from './components/StatusBanner';
 import WalletSummary from './components/WalletSummary';
+import BrandMark from './components/BrandMark';
 import { speak, isSpeaking, playChime, triggerHaptic, preloadSpeech } from './utils/soundEffects';
 import { loadDetector, detect } from './utils/detector';
 import { NOMINAL_VALUES, GUIDANCE, speechFor, initialConfirmation, stepConfirmation, guidanceFor } from './utils/scanLogic';
@@ -217,7 +218,7 @@ export default function App() {
       {splashMounted && (
         <section className={`splash${startupComplete ? ' is-leaving' : ''}`} role="status" aria-live="polite" aria-hidden={startupComplete || undefined}>
           <div className="splash-content">
-            <span className="brand-mark splash-mark" aria-hidden="true"><Banknote size={32} /></span>
+            <BrandMark className="splash-mark" aria-hidden="true" />
             <h2>TemanNetra</h2>
             <p>Menyiapkan pemindai</p>
             <p>{SERVER_LABELS[serverStatus]} · {cameraStatus === 'ready' ? 'Kamera siap' : 'Menyiapkan kamera'}</p>
@@ -227,7 +228,7 @@ export default function App() {
       <div className="app-container" inert={startupComplete ? undefined : ''}>
       <header className="app-header">
         <h1 className="brand-title">
-          <span className="brand-mark" aria-hidden="true"><Banknote size={24} /></span>
+          <BrandMark size={40} className="brand-mark" aria-hidden="true" replayOnInteract={false} />
           Teman<span>Netra</span>
         </h1>
         <div className={`server-status ${serverClass}`}>

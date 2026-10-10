@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TemanNetra — logo motion</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#eef0f4; --surface:#fff; --surface-2:#e2e5ec; --ink:#0e1116; --ink-2:#3a414d;
+    --hair:#c3c8d2; --accent:#1a3fd1; --accent-fg:#fff; --radius:20px;
+    --ease:cubic-bezier(.23,1,.32,1);
+    --font:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#14171c; --surface:#1e2229; --surface-2:#2a2f38; --ink:#f2f4f7; --ink-2:#c3c8d2; --hair:#3a414d; --accent:#8ea6ff; --accent-fg:#10131a; }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); font-family:var(--font);
+    display:flex; flex-direction:column; align-items:center; gap:28px; padding:32px 16px 48px;
+  }
+  h1{font-size:1.1rem; letter-spacing:.02em; margin:0; color:var(--ink-2); font-weight:600}
+  /* ---- hero stage ---- */
+  .stage{
+    width:min(100%, 420px); min-height:220px; display:grid; place-items:center;
+    background:var(--surface); border-radius:var(--radius); box-shadow:0 1px 0 rgb(255 255 255 / .7) inset, 0 14px 32px -12px rgb(26 40 90 / .28);
+  }
+  @media (prefers-color-scheme: dark){ .stage{ box-shadow:none } }
+  #logo-root{ width:min(70%, 90px); aspect-ratio:1; cursor:pointer; touch-action:manipulation }
+  #logo-root svg{ display:block; width:100%; height:100% }
+  .draw{ stroke-dasharray:1 }               /* pathLength="1" targets */
+  /* ---- controls ---- */
+  .controls{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:center }
+  button{
+    font:inherit; font-size:.95rem; padding:10px 18px; border-radius:999px; cursor:pointer;
+    border:1px solid var(--accent); background:var(--accent); color:var(--accent-fg); min-height:44px;
+  }
+  button.ghost{ background:transparent; color:var(--accent) }
+  label{ display:flex; align-items:center; gap:8px; font-size:.9rem; color:var(--ink-2) }
+  input[type=range]{ accent-color:var(--accent); width:140px }
+  /* ---- atoms ---- */
+  .atoms{ display:flex; gap:20px; flex-wrap:wrap; justify-content:center }
+  .atom{ display:grid; gap:6px; justify-items:center; font-size:.75rem; color:var(--ink-2) }
+  .atom svg{ width:64px; height:64px; display:block }
+  .atom .box{
+    display:grid; place-items:center; width:88px; height:88px; background:var(--surface);
+    border-radius:16px; border:1px solid var(--hair);
+  }
+  .box.t-hover{ transition:transform 320ms var(--ease) }
+  .atom:hover .box.t-hover{ transform:translateY(-6px) scale(1.08) }
+  .box.t-press{ transition:transform 120ms var(--ease) }
+  .atom:active .box.t-press{ transform:scale(1.14,.88) }
+  .box.t-pulse svg{ animation:pulse 1.2s ease-in-out infinite alternate }
+  @keyframes pulse{ from{ transform:scale(1) } to{ transform:scale(1.07) } }
+  .box.t-arc svg{ animation:arc 1.6s cubic-bezier(.45,0,.55,1) infinite alternate }
+  @keyframes arc{ from{ transform:rotate(-7deg) } to{ transform:rotate(7deg) } }
+  /* ---- principles strip ---- */
+  .principles{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:520px }
+  .pill{
+    font-size:.72rem; padding:5px 11px; border-radius:999px; border:1px solid var(--hair);
+    color:var(--ink-2); transition:background 200ms var(--ease), color 200ms var(--ease), border-color 200ms var(--ease);
+  }
+  .pill.on{ background:var(--accent); border-color:var(--accent); color:var(--accent-fg) }
+  /* ---- chromeless QA mode ---- */
+  body.qa .controls, body.qa .atoms, body.qa .principles, body.qa h1{ display:none }
+  @media (prefers-reduced-motion: reduce){
+    .box.t-pulse svg, .box.t-arc svg{ animation:none }
+  }
+</style>
+</head>
+<body>
+<h1>TemanNetra — logo motion</h1>
+
+<div class="stage">
+  <!-- QA capture target -->
+  <div id="logo-root" title="Klik untuk memutar ulang">
+    <svg id="hero" viewBox="0 0 128 128" role="img" shape-rendering="geometricPrecision"
+         aria-label="TemanNetra — pemindai uang Rupiah dengan suara">
+      <defs>
+        <linearGradient id="tn-card" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0d9488"/><stop offset="100%" stop-color="#0f766e"/>
+        </linearGradient>
+        <linearGradient id="tn-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f97316"/><stop offset="100%" stop-color="#ea580c"/>
+        </linearGradient>
+      </defs>
+      <g id="mark">
+        <rect id="card" x="8" y="8" width="112" height="112" rx="24" fill="url(#tn-card)"/>
+        <ellipse id="note" cx="64" cy="56" rx="30" ry="20" fill="#fff"/>
+        <circle id="coin" cx="64" cy="56" r="14" fill="url(#tn-accent)"/>
+        <circle id="pupil" cx="64" cy="56" r="7" fill="#1e293b"/>
+        <g id="rays" fill="none" stroke="url(#tn-accent)" stroke-linecap="round" stroke-width="2" opacity="0.6">
+          <path id="ray-c" class="draw" pathLength="1" d="M64 40V30"/>
+          <path id="ray-r" class="draw" pathLength="1" d="M64 40q8-14 16-14"/>
+          <path id="ray-l" class="draw" pathLength="1" d="M64 40q-8-14-16-14"/>
+        </g>
+        <g id="lines" fill="none" stroke="url(#tn-accent)" stroke-linecap="round" stroke-width="3">
+          <path id="line-1" class="draw" pathLength="1" d="M42 91.5H70" opacity="1"/>
+          <path id="line-2" class="draw" pathLength="1" d="M42 97.5H86" opacity="0.7"/>
+          <path id="line-3" class="draw" pathLength="1" d="M42 103.5H62" opacity="0.5"/>
+        </g>
+        <circle id="glint" cx="56" cy="49" r="3.5" fill="#fff" opacity="0.9"/>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<!-- shared plain glyph, no ids: atom thumbnails animate the whole mark -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <defs>
+    <linearGradient id="tn-card-b" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d9488"/><stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <linearGradient id="tn-accent-b" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/><stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+    <g id="tn-glyph">
+      <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#tn-card-b)"/>
+      <ellipse cx="64" cy="56" rx="30" ry="20" fill="#fff"/>
+      <circle cx="64" cy="56" r="14" fill="url(#tn-accent-b)"/>
+      <circle cx="64" cy="56" r="7" fill="#1e293b"/>
+      <g fill="none" stroke="url(#tn-accent-b)" stroke-linecap="round" stroke-width="2" opacity="0.6">
+        <path d="M64 40V30"/><path d="M64 40q8-14 16-14"/><path d="M64 40q-8-14-16-14"/>
+      </g>
+      <g fill="none" stroke="url(#tn-accent-b)" stroke-linecap="round" stroke-width="3">
+        <path d="M42 91.5H70" opacity="1"/><path d="M42 97.5H86" opacity="0.7"/><path d="M42 103.5H62" opacity="0.5"/>
+      </g>
+      <circle cx="56" cy="49" r="3.5" fill="#fff" opacity="0.9"/>
+    </g>
+  </defs>
+</svg>
+
+<div class="controls">
+  <button id="replay">Putar ulang</button>
+  <button id="slow" class="ghost" aria-pressed="false">Lambat 0,25×</button>
+  <label>Kecepatan <input id="speed" type="range" min="0.1" max="1.5" step="0.05" value="0.5">
+    <output id="speed-out">0,50×</output></label>
+</div>
+
+<div class="atoms">
+  <div class="atom"><div class="box t-hover"><svg viewBox="0 0 128 128"><use href="#tn-glyph"/></svg></div>hover lift</div>
+  <div class="atom"><div class="box t-pulse"><svg viewBox="0 0 128 128"><use href="#tn-glyph"/></svg></div>ambient pulse</div>
+  <div class="atom"><div class="box t-arc"><svg viewBox="0 0 128 128"><use href="#tn-glyph"/></svg></div>arc sway</div>
+  <div class="atom"><div class="box t-press"><svg viewBox="0 0 128 128"><use href="#tn-glyph"/></svg></div>press squash</div>
+</div>
+
+<div class="principles" id="principles">
+  <span class="pill" data-p="staging">Staging</span>
+  <span class="pill" data-p="anticipation">Anticipation</span>
+  <span class="pill" data-p="squash">Squash &amp; Stretch</span>
+  <span class="pill" data-p="arcs">Arcs</span>
+  <span class="pill" data-p="overlap">Overlap</span>
+  <span class="pill" data-p="follow">Follow Through</span>
+  <span class="pill" data-p="slowinout">Slow In / Slow Out</span>
+  <span class="pill" data-p="secondary">Secondary Action</span>
+  <span class="pill" data-p="appeal">Appeal</span>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const END = 1300;                     // ms, final frame contract timestamp
+  const qs = new URLSearchParams(location.search);
+  const qaMode = qs.has('t') || qs.get('static') === '1';
+
+  /* ---------- easing tokens ---------- */
+  const ease = {
+    linear: t => t,
+    in:     t => t * t * t,
+    out:    t => 1 - Math.pow(1 - t, 3),
+    inout:  t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+    back:   (t, s = 1.9) => 1 + (s + 1) * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2),
+  };
+
+  // keys: [[time, value, easeToReachThisKey], ...] — constant before first, after last
+  const sample = (keys, t) => {
+    if (t <= keys[0][0]) return keys[0][1];
+    for (let i = 1; i < keys.length; i++) {
+      const [t1, v1, e1] = keys[i];
+      if (t <= t1) {
+        const [t0, v0] = keys[i - 1];
+        const p = t1 === t0 ? 1 : (t - t0) / (t1 - t0);
+        return v0 + (v1 - v0) * ease[e1 || 'linear'](p);
+      }
+    }
+    return keys[keys.length - 1][1];
+  };
+
+  // pivot-anchored transform, explicit (never CSS transform-origin) — SVG bbox origin is unreliable
+  const T = (px, py, { x = 0, y = 0, sx = 1, sy = 1, rot = 0 } = {}) =>
+    `translate(${px + x} ${py + y}) rotate(${rot}) scale(${sx} ${sy}) translate(${-px} ${-py})`;
+
+  /* ---------- parts ---------- */
+  const $ = id => document.getElementById(id);
+  const part = {
+    card:  { el: $('card'),  px: 64, py: 64 },
+    note:  { el: $('note'),  px: 64, py: 56 },
+    coin:  { el: $('coin'),  px: 64, py: 56 },
+    pupil: { el: $('pupil'), px: 64, py: 56 },
+    glint: { el: $('glint'), px: 56, py: 49 },
+  };
+  const draws = {
+    rayC: $('ray-c'), rayR: $('ray-r'), rayL: $('ray-l'),
+    line1: $('line-1'), line2: $('line-2'), line3: $('line-3'),
+  };
+
+  /* ---------- timeline: staging → anticipation → action → overlap → settle ---------- */
+  const phase = t =>
+    t < 150 ? 'staging' : t < 360 ? 'anticipation' : t < 620 ? 'squash'
+    : t < 700 ? 'arcs' : t < 1000 ? 'overlap' : 'follow';
+
+  function renderAt(t) {
+    t = Math.max(0, Math.min(END, t));
+
+    // card: anticipation dip then back-out arrival (squash & stretch + slow in/out)
+    const cs = sample([[0, .86], [140, .82, 'in'], [330, 1, 'back']], t);
+    part.card.el.setAttribute('transform', T(64, 64, { sx: cs, sy: cs }));
+    part.card.el.style.opacity = sample([[0, 0], [150, .5], [300, 1, 'out']], t);
+
+    // note: pops after the card lands (overlap, not lockstep)
+    const ns = sample([[360, .3], [580, 1, 'back']], t);
+    part.note.el.setAttribute('transform', T(64, 56, { sx: ns, sy: ns }));
+    part.note.el.style.opacity = sample([[360, 0], [430, 1, 'out']], t);
+
+    // coin: overshoot then settle — the arcs beat
+    const cos = sample([[500, 0], [660, 1.16, 'back'], [745, 1, 'out']], t);
+    part.coin.el.setAttribute('transform', T(64, 56, { sx: cos, sy: cos }));
+    part.coin.el.style.opacity = sample([[500, 0], [565, 1, 'out']], t);
+
+    // pupil: follow-through, trails the coin
+    const ps = sample([[590, 0], [720, 1, 'back']], t);
+    part.pupil.el.setAttribute('transform', T(64, 56, { sx: ps, sy: ps }));
+    part.pupil.el.style.opacity = sample([[590, 0], [655, 1, 'out']], t);
+
+    // rays: drawn outward from the lens, staggered
+    draws.rayC.style.strokeDashoffset = sample([[620, 1], [790, 0, 'inout']], t);
+    draws.rayR.style.strokeDashoffset = sample([[700, 1], [870, 0, 'inout']], t);
+    draws.rayL.style.strokeDashoffset = sample([[780, 1], [950, 0, 'inout']], t);
+
+    // lines: drawn left→right, staggered
+    draws.line1.style.strokeDashoffset = sample([[830, 1], [990, 0, 'inout']], t);
+    draws.line2.style.strokeDashoffset = sample([[900, 1], [1060, 0, 'inout']], t);
+    draws.line3.style.strokeDashoffset = sample([[970, 1], [1130, 0, 'inout']], t);
+
+    // glint: secondary action — small delayed pulse, settles at attribute 0.9
+    const gs = sample([[1020, 0], [1120, 1.3, 'out'], [1260, 1, 'inout'], [1300, 1]], t);
+    part.glint.el.setAttribute('transform', T(56, 49, { sx: gs, sy: gs }));
+    part.glint.el.style.opacity = sample([[1020, 0], [1090, .9, 'out']], t);
+
+    // principle pills
+    active = t >= END ? 'appeal' : phase(t);
+    pills.forEach(p => p.classList.toggle('on', p.dataset.p === active));
+  }
+
+  /* ---------- playback ---------- */
+  const pills = [...document.querySelectorAll('#principles .pill')];
+  let active = 'staging';
+  let t = 0, rate = 0.5, last = 0, running = false;
+
+  function frame(now) {
+    if (!running) return;
+    if (!last) last = now;
+    t += (now - last) * rate;
+    last = now;
+    renderAt(t);
+    if (t >= END) { t = END; running = false; renderAt(END); setReplayLabel(false); return; }
+    requestAnimationFrame(frame);
+  }
+
+  const replayBtn = $('replay');
+  const setReplayLabel = playing => { replayBtn.textContent = playing ? 'Berhenti' : 'Putar ulang'; };
+
+  function play() {
+    if (qaMode) return;
+    t = 0; last = 0; running = true; setReplayLabel(true); requestAnimationFrame(frame);
+  }
+
+  replayBtn.addEventListener('click', play);
+  $('logo-root').addEventListener('click', play);
+
+  // speed slider affects the live animation, not just the next replay
+  const speed = $('speed'), speedOut = $('speed-out');
+  const applyRate = () => { rate = Number(speed.value); speedOut.textContent = rate.toFixed(2).replace('.', ',') + '×'; };
+  speed.addEventListener('input', applyRate);
+
+  // slow-motion toggle ↔ slider
+  const slow = $('slow');
+  slow.addEventListener('click', () => {
+    const on = slow.getAttribute('aria-pressed') !== 'true';
+    slow.setAttribute('aria-pressed', String(on));
+    speed.value = on ? 0.25 : 0.5;
+    applyRate();
+  });
+
+  /* ---------- QA hooks ---------- */
+  applyRate();
+  if (qaMode) document.body.classList.add('qa');
+
+  if (qs.get('static') === '1' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    renderAt(END);
+  } else if (qs.has('t')) {
+    renderAt(Number(qs.get('t')) || 0);
+  } else {
+    renderAt(0);
+    requestAnimationFrame(() => { play(); });
+  }
+
+  window.__p2mReady = true;
+})();
+</script>
+</body>
+</html>
