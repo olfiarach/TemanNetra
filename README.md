@@ -13,12 +13,13 @@ TemanNetra is a prototype camera-based Indonesian Rupiah banknote reader for bli
 - One note at a time. Frames with several notes, or with conflicting denominations, are treated as uncertain ("Nominal belum pasti, coba lagi") and are never announced or counted.
 - Supported denominations: Rp1.000, Rp2.000, Rp5.000, Rp10.000, Rp20.000, Rp50.000 and Rp100.000.
 - Short Indonesian announcements ("Seratus ribu rupiah."):
-  - Fixed phrases play pre-generated gTTS clips (`frontend/public/tts/`), so the accent does not depend on the device.
+  - Fixed phrases play pre-generated Edge TTS clips (`id-ID-GadisNeural`, `frontend/public/tts/`), so the voice does not depend on the device.
   - Other speech, such as the wallet total, uses the browser's `SpeechSynthesis`.
   - New speech interrupts older speech, and playback failures are shown in the UI.
 - Distinct states for: camera permission denied, camera unavailable, insecure context, model still loading, model download failed, model unavailable, and audio unavailable. Scanning is disabled unless both the camera and the model are ready.
 - The last confirmed result stays visible. **Uji Suara** tests the audio and **Ulangi** repeats the result.
 - Optional vibration and a bounding-box overlay.
+- Splash screen while the model loads; the logo then moves into the header.
 - Temporary wallet tally. This is secondary and counts confirmed notes only.
 
 ## Architecture
@@ -48,6 +49,8 @@ Camera frames never leave the device. The onnxruntime wasm binaries load from js
 - `utils/detector.js` is a port of the backend's `main.predict()` pipeline.
 - `utils/scanLogic.js` holds the confirmation logic.
 - `utils/soundEffects.js` handles speech.
+- `components/BrandMark.jsx` is the logo (splash and header).
+- `motion/` and `scripts/qa/` hold the logo motion spec and the favicon/QA scripts; `outputs/` holds their renders. None of these are part of the build.
 
 The wallet lives only in React state, so reloading or closing the page clears it.
 
@@ -99,7 +102,7 @@ The model and speech clips are already in `frontend/public/`. No backend is need
 
 ```bash
 python3 -m venv venv
-venv/bin/pip install -r backend/requirements.txt onnx onnxruntime onnxslim
+venv/bin/pip install -r backend/requirements.txt onnx onnxruntime onnxslim   # requirements include edge-tts
 
 curl -fL https://github.com/olfiarach/TemanNetra/releases/download/v.1.1.0/best.pt -o models/best.pt
 echo "a910b6976ac24ed3a7f74b6058060a3280436b2209ff885add4f0a47769311fe  models/best.pt" | shasum -a 256 -c -
@@ -115,6 +118,7 @@ venv/bin/python backend/web_parity.py    # must print OK for every sample
 ```
 
 - `export_web.py` refuses to run unless `models/best.pt` matches the checksum in the script. Update `PT_SHA256` there, and the Model table above, when you release a new artifact.
+- Speech clips are generated with `edge-tts`, which needs network access to Microsoft's TTS service.
 - When you add a fixed phrase to the frontend, also add it to `PHRASES` in `export_web.py`. A phrase missing from that list still works, but falls back to the browser voice.
 
 ## Deployment (GitHub Pages)
@@ -183,7 +187,7 @@ Not verified, because it needs real notes, a held-out dataset or the target phon
 
 - On the deployed site, detection runs entirely in the browser. Camera frames are never uploaded, stored or logged.
 - The site loads static files from GitHub Pages, plus the onnxruntime wasm from jsDelivr. There are no analytics and no accounts.
-- The local backend API has no authentication. Do not expose it publicly; its upload caps and rate limit reduce abuse but do not secure it.
+- There is no server: the backend is a local Python module for export, parity and training only.
 - Treat results as assistive suggestions, not financial verification.
 
 ## Repository layout
@@ -201,8 +205,10 @@ Not verified, because it needs real notes, a held-out dataset or the target phon
 │   └── requirements.txt
 ├── frontend/
 │   ├── public/model/             # best.onnx, meta.json (committed)
-│   ├── public/tts/               # Pre-generated Indonesian clips
+│   ├── public/tts/               # Pre-generated Edge TTS Indonesian clips
+│   ├── motion/, outputs/         # Logo motion spec and renders (not built)
 │   ├── scripts/parity.mjs        # Node side of the parity check
+│   ├── scripts/qa/               # Favicon generation and QA scripts
 │   ├── src/                      # App.jsx, components/, utils/ (detector, scanLogic, soundEffects)
 │   └── vite.config.js
 ├── models/
