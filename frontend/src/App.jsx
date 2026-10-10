@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { Volume2, Play, Pause, Headphones, CheckCircle2, AlertTriangle, Loader } from 'lucide-react';
 import ScannerView, { CAMERA_MESSAGES } from './components/ScannerView';
 import StatusBanner from './components/StatusBanner';
@@ -14,6 +14,8 @@ const ERROR_GAP_MS = 750; // backoff after a failed frame
 const GUIDANCE_GAP_MS = 3000; // min gap between spoken framing hints
 const UNCERTAIN_PROMPT = 'Nominal belum pasti, coba lagi';
 
+const SPLASH_EXIT_MS = 540; // must exceed the 520ms mark glide so unmount never cuts it off
+
 const SERVER_LABELS = {
   checking: 'Memuat model',
   unreachable: 'Model gagal diunduh',
@@ -28,6 +30,11 @@ export default function App() {
   const [cameraStatus, setCameraStatus] = useState('starting'); // starting | ready | denied | unavailable | insecure
   const [audioStatus, setAudioStatus] = useState('unknown'); // unknown | ok | unavailable
   const [startupComplete, setStartupComplete] = useState(false);
+  const [introDone, setIntroDone] = useState(false); // logo intro has played once
+  const splashRef = useRef(null);
+  const headerRef = useRef(null);
+  // Splash exits only when startup is done AND the logo intro finished, so a fast load never cuts the animation.
+  const leaving = startupComplete && introDone;
   const [splashMounted, setSplashMounted] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [lastResult, setLastResult] = useState(null); // last CONFIRMED note: { label }
@@ -51,10 +58,22 @@ export default function App() {
   }, [cameraStatus, serverStatus]);
   // Unmount after the CSS exit transition; a timer (not transitionend) also covers reduced motion.
   useEffect(() => {
-    if (!startupComplete) return;
-    const t = setTimeout(() => setSplashMounted(false), 400);
+    if (!leaving) return;
+    const t = setTimeout(() => setSplashMounted(false), SPLASH_EXIT_MS);
     return () => clearTimeout(t);
-  }, [startupComplete]);
+  }, [leaving]);
+
+  // Glide the splash mark onto the header mark: measure the delta before paint, CSS transitions it.
+  useLayoutEffect(() => {
+    if (!leaving) return;
+    const from = splashRef.current?.querySelector('.splash-mark')?.getBoundingClientRect();
+    const to = headerRef.current?.querySelector('.brand-mark')?.getBoundingClientRect();
+    if (!from?.width || !to?.width) return;
+    const style = splashRef.current.style;
+    style.setProperty('--mark-dx', `${to.left + to.width / 2 - (from.left + from.width / 2)}px`);
+    style.setProperty('--mark-dy', `${to.top + to.height / 2 - (from.top + from.height / 2)}px`);
+    style.setProperty('--mark-s', String(to.width / from.width));
+  }, [leaving]);
 
   useEffect(() => {
     isScanningRef.current = isScanning;
@@ -216,19 +235,21 @@ export default function App() {
   return (
     <>
       {splashMounted && (
-        <section className={`splash${startupComplete ? ' is-leaving' : ''}`} role="status" aria-live="polite" aria-hidden={startupComplete || undefined}>
+        <section ref={splashRef} className={`splash${leaving ? ' is-leaving' : ''}`} role="status" aria-live="polite" aria-hidden={leaving || undefined}>
           <div className="splash-content">
-            <BrandMark className="splash-mark" aria-hidden="true" />
-            <h2>TemanNetra</h2>
-            <p>Menyiapkan pemindai</p>
-            <p>{SERVER_LABELS[serverStatus]} · {cameraStatus === 'ready' ? 'Kamera siap' : 'Menyiapkan kamera'}</p>
+            <BrandMark className="splash-mark" aria-hidden="true" onComplete={() => setIntroDone(true)} />
+            <div className="splash-text">
+              <h2>TemanNetra</h2>
+              <p>Menyiapkan pemindai</p>
+              <p>{SERVER_LABELS[serverStatus]} · {cameraStatus === 'ready' ? 'Kamera siap' : 'Menyiapkan kamera'}</p>
+            </div>
           </div>
         </section>
       )}
-      <div className="app-container" inert={startupComplete ? undefined : ''}>
-      <header className="app-header">
+      <div className="app-container" inert={leaving ? undefined : ''}>
+      <header ref={headerRef} className="app-header">
         <h1 className="brand-title">
-          <BrandMark size={40} className="brand-mark" aria-hidden="true" replayOnInteract={false} />
+          <BrandMark size={40} className="brand-mark" aria-hidden="true" replayOnInteract={false} animate={false} />
           Teman<span>Netra</span>
         </h1>
         <div className={`server-status ${serverClass}`}>

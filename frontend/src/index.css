@@ -98,7 +98,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 
 /* Startup waits for the camera and model, not a fixed timer. */
-.app-container { transition: opacity 200ms var(--ease); }
+.app-container { transition: opacity 300ms var(--ease) 150ms; }
 .app-container[inert] { opacity: 0; }
 .splash {
   position: fixed;
@@ -107,17 +107,30 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: grid;
   place-items: center;
   padding: 24px;
-  background: var(--bg);
   color: var(--ink);
-  transition: opacity 400ms var(--ease);
 }
-.splash-content { width: min(100%, 400px); transition: opacity 250ms var(--ease), transform 400ms var(--ease); }
-.splash.is-leaving { opacity: 0; pointer-events: none; }
-.splash.is-leaving .splash-content { opacity: 0; transform: translateY(-8px) scale(0.97); }
-.splash-mark { width: 96px; height: 96px; }
+/* Background is its own layer so the mark can glide over it while the veil fades. */
+.splash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  transition: opacity 450ms var(--ease);
+}
+.splash.is-leaving { pointer-events: none; }
+.splash.is-leaving::before { opacity: 0; }
+.splash-content { position: relative; width: min(100%, 400px); display: grid; justify-items: center; }
+.splash-mark { width: 96px; height: 96px; transform-origin: center; transition: transform 520ms var(--ease); }
+.splash.is-leaving .splash-mark { transform: translate(var(--mark-dx, 0px), var(--mark-dy, 0px)) scale(var(--mark-s, 1)); }
+.splash-text { transition: opacity 250ms var(--ease), transform 400ms var(--ease); }
+.splash.is-leaving .splash-text { opacity: 0; transform: translateY(-8px); }
 .splash h2 { margin: 24px 0 4px; font-size: clamp(2rem, 9vw, 3rem); line-height: 1.1; }
 .splash p { margin: 8px 0; }
 .splash p:last-child { color: var(--ink-2); font-size: var(--fs-sm); }
+@media (prefers-reduced-motion: reduce) {
+  .splash::before, .splash-mark, .splash-text { transition: none; }
+  .splash.is-leaving .splash-mark { transform: none; }
+}
 
 /* ---------- Header ---------- */
 .app-header {

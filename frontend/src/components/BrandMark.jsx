@@ -47,6 +47,8 @@ export default function BrandMark({
   size = 64,
   className = '',
   replayOnInteract = true,
+  animate = true,
+  onComplete,
   style,
   ...rest
 }) {
@@ -62,6 +64,9 @@ export default function BrandMark({
     typeof window !== 'undefined' && window.matchMedia
       ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
       : false;
+  // Latest callback without re-running the animation when the parent re-renders.
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -138,9 +143,10 @@ export default function BrandMark({
       setOp(parts.glint, s([[1020, 0], [1090, 0.9, 'out3']]));
     };
 
-    if (reduced) {
+    if (reduced || !animate) {
       renderAt(DURATION);
       setPhaseIndex(5);
+      onCompleteRef.current?.();
       return undefined;
     }
 
@@ -152,6 +158,7 @@ export default function BrandMark({
       renderAt(Math.min(t, DURATION));
       setPhaseIndex(phase(t));
       if (t < DURATION) raf = requestAnimationFrame(step);
+      else onCompleteRef.current?.();
     };
     renderAt(0);
     raf = requestAnimationFrame(step);
@@ -174,7 +181,7 @@ export default function BrandMark({
       };
     }
     return () => cancelAnimationFrame(raf);
-  }, [reduced, replayOnInteract]);
+  }, [reduced, replayOnInteract, animate]);
 
   return (
     <svg
