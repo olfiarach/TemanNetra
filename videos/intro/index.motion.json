@@ -1,0 +1,16 @@
+{
+  "duration": 36,
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#el-logo", "bySec": 1.0 },
+    { "kind": "appearsBy", "selector": "#el-hook", "bySec": 5.0 },
+    { "kind": "appearsBy", "selector": "#el-alur", "bySec": 10.0 },
+    { "kind": "appearsBy", "selector": "#el-bukti", "bySec": 16.5 },
+    { "kind": "appearsBy", "selector": "#el-prinsip", "bySec": 25.5 },
+    { "kind": "appearsBy", "selector": "#el-cta", "bySec": 31.5 },
+    { "kind": "before", "a": "#el-logo", "b": "#el-hook" },
+    { "kind": "before", "a": "#el-hook", "b": "#el-alur" },
+    { "kind": "before", "a": "#el-alur", "b": "#el-bukti" },
+    { "kind": "before", "a": "#el-bukti", "b": "#el-prinsip" },
+    { "kind": "before", "a": "#el-prinsip", "b": "#el-cta" }
+  ]
+}

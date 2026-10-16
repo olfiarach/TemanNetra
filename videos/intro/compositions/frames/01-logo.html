@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head><meta charset="UTF-8"></head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-400.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-700.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+        @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-400.woff2") format("woff2"); font-weight: 100 800; font-style: normal; }
+        #root {
+          position: absolute; inset: 0; overflow: hidden;
+          background: #0e1116;
+          font-family: "Atkinson Hyperlegible", sans-serif;
+          color: #eef0f4;
+        }
+        .scene { position: absolute; inset: 0; }
+        .glow { position: absolute; border-radius: 50%; opacity: 0; }
+        .glow-teal { width: 900px; height: 900px; left: -260px; top: -300px;
+          background: radial-gradient(circle, rgba(13,148,136,0.22) 0%, rgba(13,148,136,0) 70%); }
+        .glow-orange { width: 800px; height: 800px; right: -220px; bottom: -260px;
+          background: radial-gradient(circle, rgba(249,115,22,0.14) 0%, rgba(249,115,22,0) 70%); }
+        .stage { position: absolute; inset: 0; display: grid; place-items: center; }
+        .lockup { display: grid; justify-items: center; }
+        .mark { width: 300px; height: 300px; }
+        .wordmark { margin: 28px 0 0; font-size: 108px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+        .tagline { margin: 18px 0 0; font-size: 30px; font-weight: 400; color: #aeb6c2; }
+        .tagline b { color: #f97316; font-weight: 700; }
+        .meta { position: absolute; bottom: 56px; left: 0; right: 0; text-align: center;
+          font-family: "JetBrains Mono", monospace; font-size: 21px; letter-spacing: 0.28em;
+          text-transform: uppercase; color: #9aa4b2; }
+      </style>
+      <div data-hf-id="hf-2r9a" id="root" data-composition-id="f01-logo" data-width="1920" data-height="1080" data-duration="4">
+        <div data-hf-id="hf-wble" class="scene" id="f01-scene">
+          <div data-hf-id="hf-xrpz" class="glow glow-teal" id="f01-glow-teal"></div>
+          <div data-hf-id="hf-96y7" class="glow glow-orange" id="f01-glow-orange"></div>
+          <div data-hf-id="hf-tan6" class="stage">
+            <div data-hf-id="hf-9uwi" class="lockup" id="f01-lockup">
+              <svg data-hf-id="hf-oabf" class="mark" id="f01-mark" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <defs data-hf-id="hf-mh0t">
+                  <lineargradient data-hf-id="hf-1ovu" id="f01-tn-card" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop data-hf-id="hf-b5yc" offset="0%" stop-color="#0d9488" /><stop data-hf-id="hf-8634" offset="100%" stop-color="#0f766e" />
+                  </lineargradient>
+                  <lineargradient data-hf-id="hf-6vbe" id="f01-tn-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop data-hf-id="hf-142f" offset="0%" stop-color="#f97316" /><stop data-hf-id="hf-8ec8" offset="100%" stop-color="#ea580c" />
+                  </lineargradient>
+                </defs>
+                <rect data-hf-id="hf-dukj" id="f01-card" x="8" y="8" width="112" height="112" rx="24" fill="url(#f01-tn-card)" />
+                <ellipse data-hf-id="hf-9m1j" id="f01-note" cx="64" cy="56" rx="30" ry="20" fill="#fff" />
+                <circle data-hf-id="hf-ooxv" id="f01-coin" cx="64" cy="56" r="14" fill="url(#f01-tn-accent)" />
+                <circle data-hf-id="hf-uf6d" id="f01-pupil" cx="64" cy="56" r="7" fill="#1e293b" />
+                <g data-hf-id="hf-68mb" id="f01-rays" fill="none" stroke="url(#f01-tn-accent)" stroke-linecap="round" stroke-width="2" opacity="0.6">
+                  <path data-hf-id="hf-d6j1" id="f01-ray-c" pathLength="1" d="M64 40V30" />
+                  <path data-hf-id="hf-j5nb" id="f01-ray-r" pathLength="1" d="M64 40q8-14 16-14" />
+                  <path data-hf-id="hf-7r4z" id="f01-ray-l" pathLength="1" d="M64 40q-8-14-16-14" />
+                </g>
+                <g data-hf-id="hf-00um" id="f01-lines" fill="none" stroke="url(#f01-tn-accent)" stroke-linecap="round" stroke-width="3">
+                  <path data-hf-id="hf-0i45" id="f01-line-1" pathLength="1" d="M42 91.5H70" opacity="1" />
+                  <path data-hf-id="hf-3s5v" id="f01-line-2" pathLength="1" d="M42 97.5H86" opacity="0.7" />
+                  <path data-hf-id="hf-kqyc" id="f01-line-3" pathLength="1" d="M42 103.5H62" opacity="0.5" />
+                </g>
+                <circle data-hf-id="hf-m8o2" id="f01-glint" cx="56" cy="49" r="3.5" fill="#fff" opacity="0.9" />
+              </svg>
+              <h1 data-hf-id="hf-pedd" class="wordmark" id="f01-wordmark">TemanNetra</h1>
+              <p data-hf-id="hf-2bi3" class="tagline" id="f01-tagline">Pemindai uang Rupiah di <b data-hf-id="hf-4chb">browser</b></p>
+            </div>
+          </div>
+          <div data-hf-id="hf-9832" class="meta" id="f01-meta">Kamera · Deteksi · Suara</div>
+        </div>
+      </div>
+      <script>
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+        const S = "svgOrigin";
+
+        // ── Logo choreography (from frontend/motion/motion_spec.md, 1300 ms) ──
+        const out3 = "power3.out", in3 = "power3.in", inout = "power2.inOut", back = "back.out(1.9)";
+
+        // glows bloom behind the mark first
+        tl.fromTo("#f01-glow-teal", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 1.6, ease: "power2.out" }, 0)
+          .fromTo("#f01-glow-orange", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 1.8, ease: "power2.out" }, 0.2);
+
+        // 0.00–0.14 card at 86 %, fading in
+        tl.fromTo("#f01-card", { scale: 0.86, opacity: 0, [S]: "64 64" },
+          { scale: 0.86, opacity: 1, duration: 0.14, ease: "linear", [S]: "64 64" }, 0)
+        // 0.14–0.30 anticipation dip to 82 %
+          .to("#f01-card", { scale: 0.82, duration: 0.15, ease: in3, [S]: "64 64" }, 0.14)
+        // 0.30–0.56 back-out arrival at 100 %
+          .to("#f01-card", { scale: 1, duration: 0.26, ease: back, [S]: "64 64" }, 0.30)
+        // 0.36–0.58 note pops 30 % → 100 %
+          .fromTo("#f01-note", { scale: 0.3, opacity: 0, [S]: "64 56" },
+            { scale: 1, opacity: 1, duration: 0.22, ease: out3, [S]: "64 56" }, 0.36)
+        // 0.50–0.745 lens overshoots to 116 %, settles
+          .fromTo("#f01-coin", { scale: 0.2, opacity: 0, [S]: "64 56" },
+            { scale: 1.16, opacity: 1, duration: 0.14, ease: out3, [S]: "64 56" }, 0.50)
+          .to("#f01-coin", { scale: 1, duration: 0.105, ease: inout, [S]: "64 56" }, 0.64)
+        // 0.59–0.72 pupil trails the lens
+          .fromTo("#f01-pupil", { scale: 0, opacity: 0, [S]: "64 56" },
+            { scale: 1.12, opacity: 1, duration: 0.10, ease: out3, [S]: "64 56" }, 0.59)
+          .to("#f01-pupil", { scale: 1, duration: 0.08, ease: inout, [S]: "64 56" }, 0.70);
+
+        // 0.62 / 0.70 / 0.78 rays drawn outward, staggered 80 ms
+        ["#f01-ray-c", "#f01-ray-r", "#f01-ray-l"].forEach((sel, i) => {
+          tl.fromTo(sel, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.17, ease: inout }, 0.62 + i * 0.08);
+        });
+        // 0.83 / 0.90 / 0.97 denomination lines drawn left→right, staggered 70 ms
+        ["#f01-line-1", "#f01-line-2", "#f01-line-3"].forEach((sel, i) => {
+          tl.fromTo(sel, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.16, ease: inout }, 0.83 + i * 0.07);
+        });
+        // 1.02–1.26 glint pulses to 130 %, settles
+        tl.fromTo("#f01-glint", { scale: 1, opacity: 0.9, [S]: "56 49" },
+          { scale: 1.3, opacity: 1, duration: 0.12, ease: out3, [S]: "56 49" }, 1.02)
+          .to("#f01-glint", { scale: 1, opacity: 0.9, duration: 0.12, ease: inout, [S]: "56 49" }, 1.15);
+
+        // 1.30–2.10 lockup text follows the mark
+        tl.fromTo("#f01-wordmark", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: out3 }, 1.32)
+          .fromTo("#f01-tagline", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: out3 }, 1.52)
+          .fromTo("#f01-meta", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.out" }, 1.9);
+
+        // ── ambient life across the hold (bounded, deterministic) ──
+        const breathe = { p: 0 };
+        tl.to(breathe, {
+          p: Math.PI * 2, duration: 2.4, ease: "none",
+          onUpdate: () => {
+            const s = Math.sin(breathe.p);
+            const gl = document.getElementById("f01-glow-teal");
+            const go = document.getElementById("f01-glow-orange");
+            gl.style.transform = `scale(${1 + s * 0.02})`;
+            go.style.transform = `scale(${1 - s * 0.02})`;
+          }
+        }, 1.5);
+        tl.fromTo("#f01-glint", { opacity: 0.9 }, { opacity: 0.55, duration: 0.9, yoyo: true, repeat: 1, ease: "sine.inOut", overwrite: "auto", [S]: "56 49" }, 1.75);
+
+        window.__timelines["f01-logo"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

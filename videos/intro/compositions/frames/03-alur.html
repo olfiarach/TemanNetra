@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head><meta charset="UTF-8"></head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-400.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-700.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+        @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-400.woff2") format("woff2"); font-weight: 100 800; font-style: normal; }
+        #root {
+          position: absolute; inset: 0; overflow: hidden;
+          background: #0e1116;
+          font-family: "Atkinson Hyperlegible", sans-serif;
+          color: #eef0f4;
+        }
+        .scene { position: absolute; inset: 0; }
+        .grid-lines { position: absolute; inset: 0; opacity: 0.05;
+          background-image: linear-gradient(#eef0f4 1px, transparent 1px), linear-gradient(90deg, #eef0f4 1px, transparent 1px);
+          background-size: 96px 96px; }
+        .header { position: absolute; top: 96px; left: 160px; }
+        .kicker { font-family: "JetBrains Mono", monospace; font-size: 24px;
+          letter-spacing: 0.3em; text-transform: uppercase; color: #aeb6c2; margin: 0; }
+        .kicker .bar { display: inline-block; width: 56px; height: 4px; background: #f97316;
+          border-radius: 2px; margin-right: 24px; vertical-align: 8px; }
+        .flow { position: absolute; left: 160px; right: 160px; top: 300px;
+          display: flex; align-items: center; justify-content: space-between; }
+        .node { width: 420px; flex: none; background: #161c24; border: 1px solid #2a323e; border-radius: 20px;
+          padding: 48px 44px; box-sizing: border-box; position: relative; overflow: hidden; }
+        .node svg { display: block; }
+        .node h2 { margin: 30px 0 12px; font-size: 44px; font-weight: 700; }
+        .node p { margin: 0; font-size: 25px; color: #aeb6c2; line-height: 1.45; }
+        .node .step { font-family: "JetBrains Mono", monospace; font-size: 20px; color: #f97316;
+          letter-spacing: 0.2em; margin: 0 0 18px; }
+        .sweep { position: absolute; top: 0; bottom: 0; width: 120px; left: -120px;
+          background: linear-gradient(90deg, rgba(249,115,22,0) 0%, rgba(249,115,22,0.16) 50%, rgba(249,115,22,0) 100%); }
+        .link { flex: none; }
+        .footnote { position: absolute; bottom: 110px; left: 160px; right: 160px;
+          font-size: 32px; color: #aeb6c2; margin: 0; }
+        .footnote b { color: #eef0f4; font-weight: 700; }
+        .privacy { position: absolute; bottom: 52px; left: 160px; display: flex; align-items: center; gap: 14px;
+          font-family: "JetBrains Mono", monospace; font-size: 26px; color: #0d9488; letter-spacing: 0.06em; }
+      </style>
+      <div data-hf-id="hf-mkb7" id="root" data-composition-id="f03-alur" data-width="1920" data-height="1080" data-duration="6">
+        <div data-hf-id="hf-b7l4" class="scene" id="f03-scene">
+          <div data-hf-id="hf-c732" class="grid-lines" id="f03-grid"></div>
+          <div data-hf-id="hf-4y7z" class="header">
+            <p data-hf-id="hf-mhvd" class="kicker" id="f03-kicker"><span data-hf-id="hf-ccwv" class="bar" id="f03-bar"></span>Cara kerja</p>
+          </div>
+          <div data-hf-id="hf-rzoo" class="flow" id="f03-flow">
+            <div data-hf-id="hf-s2qu" class="node" id="f03-node-1">
+              <svg data-hf-id="hf-zz70" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path data-hf-id="hf-u92x" d="M23 7l-7 5 7 5V7z" /><rect data-hf-id="hf-pd1o" x="1" y="5" width="15" height="14" rx="2" />
+              </svg>
+              <p data-hf-id="hf-b1ki" class="step">01</p>
+              <h2 data-hf-id="hf-bdo8">Kamera</h2>
+              <p data-hf-id="hf-mtqa">Frame video diambil langsung, diskalakan ke 416 px.</p>
+            </div>
+            <svg data-hf-id="hf-6qxa" class="link" id="f03-link-1" width="90" height="24" viewBox="0 0 90 24" aria-hidden="true">
+              <line data-hf-id="hf-osn3" id="f03-line-1" x1="0" y1="12" x2="72" y2="12" stroke="#3a414d" stroke-width="3" stroke-linecap="round" />
+              <path data-hf-id="hf-7pko" id="f03-arrow-1" d="M70 4l16 8-16 8z" fill="#3a414d" />
+            </svg>
+            <div data-hf-id="hf-o4mt" class="node" id="f03-node-2">
+              <div data-hf-id="hf-4n5b" class="sweep" id="f03-sweep" data-layout-ignore=""></div>
+              <svg data-hf-id="hf-pll0" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect data-hf-id="hf-z8kx" x="4" y="4" width="16" height="16" rx="2" /><rect data-hf-id="hf-e410" x="9" y="9" width="6" height="6" />
+                <path data-hf-id="hf-l9ai" d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" />
+              </svg>
+              <p data-hf-id="hf-bfvj" class="step">02</p>
+              <h2 data-hf-id="hf-l63h">YOLOv8n ONNX</h2>
+              <p data-hf-id="hf-gbwk">Deteksi nominal lewat onnxruntime-web (wasm) di perangkat.</p>
+            </div>
+            <svg data-hf-id="hf-eziv" class="link" id="f03-link-2" width="90" height="24" viewBox="0 0 90 24" aria-hidden="true">
+              <line data-hf-id="hf-czc0" id="f03-line-2" x1="0" y1="12" x2="72" y2="12" stroke="#3a414d" stroke-width="3" stroke-linecap="round" />
+              <path data-hf-id="hf-gdgj" id="f03-arrow-2" d="M70 4l16 8-16 8z" fill="#3a414d" />
+            </svg>
+            <div data-hf-id="hf-ncz0" class="node" id="f03-node-3">
+              <svg data-hf-id="hf-oenx" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path data-hf-id="hf-g8rf" d="M11 5L6 9H2v6h4l5 4V5z" /><path data-hf-id="hf-eczi" d="M15.5 8.5a5 5 0 010 7" />
+              </svg>
+              <p data-hf-id="hf-bu6k" class="step">03</p>
+              <h2 data-hf-id="hf-fwpl">Suara + Getar</h2>
+              <p data-hf-id="hf-feuh">Hasil diucapkan dalam Bahasa Indonesia, plus pesan getar.</p>
+            </div>
+          </div>
+          <p data-hf-id="hf-z7q7" class="footnote" id="f03-footnote">Cukup <b data-hf-id="hf-jgwl">satu lembar</b> uang di depan kamera — hasil diucapkan <b data-hf-id="hf-m7d5">setelah dikonfirmasi 3 frame</b> berturut-turut.</p>
+          <div data-hf-id="hf-og0i" class="privacy" id="f03-privacy">Data kamera tak pernah meninggalkan ponsel</div>
+        </div>
+      </div>
+      <script>
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+
+        // header
+        tl.fromTo("#f03-bar", { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, duration: 0.4, ease: "power2.out" }, 0.05)
+          .fromTo("#f03-kicker", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.10)
+          .fromTo("#f03-grid", { opacity: 0 }, { opacity: 0.05, duration: 1.0, ease: "power1.out" }, 0.05);
+
+        // nodes arrive one at a time (smooth settle, no overshoot)
+        [["#f03-node-1", 0.35], ["#f03-node-2", 0.70], ["#f03-node-3", 1.05]].forEach(([sel, at]) => {
+          tl.fromTo(sel, { scale: 0.9, opacity: 0, y: 26 },
+            { scale: 1, opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, at);
+        });
+
+        // connectors draw between nodes, then the arrowheads land
+        [["#f03-line-1", "#f03-arrow-1", 0.62], ["#f03-line-2", "#f03-arrow-2", 0.97]].forEach(([lineSel, arrowSel, at]) => {
+          const line = document.querySelector(lineSel);
+          const len = line.getTotalLength();
+          tl.fromTo(line, { strokeDasharray: len, strokeDashoffset: len },
+            { strokeDashoffset: 0, duration: 0.42, ease: "power2.out" }, at);
+          tl.fromTo(arrowSel, { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.24, ease: "power2.out" }, at + 0.34);
+        });
+
+        // scan sweep across the model node, then everything settles
+        tl.fromTo("#f03-sweep", { x: 0 }, { x: 620, duration: 1.1, ease: "power1.inOut" }, 1.45);
+
+        // footnote + privacy note
+        tl.fromTo("#f03-footnote", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 1.7)
+          .fromTo("#f03-privacy", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 2.0);
+
+        // ambient: nodes breathe out of phase so the frame stays alive through the hold
+        [["#f03-node-1", 0], ["#f03-node-2", 0.5], ["#f03-node-3", 1.0]].forEach(([sel, off]) => {
+          tl.to(sel, { y: -6, duration: 1.4, yoyo: true, repeat: 1, ease: "sine.inOut" }, 2.4 + off);
+        });
+
+        window.__timelines["f03-alur"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

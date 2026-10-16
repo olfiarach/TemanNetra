@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head><meta charset="UTF-8"></head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-400.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-700.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+        @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-400.woff2") format("woff2"); font-weight: 100 800; font-style: normal; }
+        #root {
+          position: absolute; inset: 0; overflow: hidden;
+          background: #0e1116;
+          font-family: "Atkinson Hyperlegible", sans-serif;
+          color: #eef0f4;
+        }
+        .scene { position: absolute; inset: 0; }
+        .header { position: absolute; top: 96px; left: 160px; }
+        .kicker { font-family: "JetBrains Mono", monospace; font-size: 24px;
+          letter-spacing: 0.3em; text-transform: uppercase; color: #aeb6c2; margin: 0; }
+        .kicker .bar { display: inline-block; width: 56px; height: 4px; background: #f97316;
+          border-radius: 2px; margin-right: 24px; vertical-align: 8px; }
+        .pwrap { position: absolute; }
+        .photo-card { background: #161c24; border: 1px solid #2a323e;
+          border-radius: 20px; padding: 14px; box-sizing: border-box; transform-origin: center; }
+        .photo-card img { display: block; border-radius: 10px; object-fit: cover; }
+        .chip { display: inline-block; margin-top: 14px; padding: 8px 18px; border-radius: 999px;
+          color: #fff; font-weight: 700; font-size: 24px; transform-origin: left center; }
+        .chip small { font-family: "JetBrains Mono", monospace; font-weight: 400; opacity: 0.85; font-size: 19px; margin-left: 10px; }
+        .c-100000 { background: #9e0e1a; }
+        .c-20000 { background: #0f5c2e; }
+        .c-10000 { background: #5b2a86; }
+        #f03b-w20k { left: 120px; top: 400px; }
+        #f03b-20k { width: 488px; transform: rotate(-3deg); }
+        #f03b-20k img { width: 460px; height: 324px; }
+        #f03b-w100k { left: 666px; top: 306px; }
+        #f03b-100k { width: 588px; }
+        #f03b-100k img { width: 560px; height: 420px; }
+        #f03b-w10k { left: 1300px; top: 396px; }
+        #f03b-10k { width: 468px; transform: rotate(2.5deg); }
+        #f03b-10k img { width: 440px; height: 330px; }
+        .footnote { position: absolute; bottom: 96px; left: 160px; font-size: 32px; color: #aeb6c2; margin: 0; }
+        .footnote b { color: #eef0f4; }
+      </style>
+      <div data-hf-id="hf-jfee" id="root" data-composition-id="f04-bukti" data-width="1920" data-height="1080" data-duration="9">
+        <div data-hf-id="hf-dn1s" class="scene" id="f03b-scene">
+          <div data-hf-id="hf-4y7z" class="header">
+            <p data-hf-id="hf-6zr2" class="kicker" id="f03b-kicker"><span data-hf-id="hf-oaev" class="bar" id="f03b-bar"></span>Hasil deteksi nyata</p>
+          </div>
+          <div data-hf-id="hf-k97k" class="pwrap" id="f03b-w20k">
+            <div data-hf-id="hf-mcmu" class="photo-card" id="f03b-20k">
+              <img data-hf-id="hf-hmt2" src="assets/note-20k.jpg" alt="Deteksi Rp20.000">
+              <span data-hf-id="hf-a9y9" class="chip c-20000" id="f03b-chip-20k">Rp20.000 <small data-hf-id="hf-18ev">0.90</small></span>
+            </div>
+          </div>
+          <div data-hf-id="hf-lusr" class="pwrap" id="f03b-w100k">
+            <div data-hf-id="hf-nvop" class="photo-card" id="f03b-100k">
+              <img data-hf-id="hf-aru2" src="assets/note-100k.jpg" alt="Deteksi Rp100.000">
+              <span data-hf-id="hf-bjoo" class="chip c-100000" id="f03b-chip-100k">Rp100.000 <small data-hf-id="hf-4ev3">0.98</small></span>
+            </div>
+          </div>
+          <div data-hf-id="hf-fwdv" class="pwrap" id="f03b-w10k">
+            <div data-hf-id="hf-1gb1" class="photo-card" id="f03b-10k">
+              <img data-hf-id="hf-4mc0" src="assets/note-10k.jpg" alt="Deteksi Rp10.000">
+              <span data-hf-id="hf-4iok" class="chip c-10000" id="f03b-chip-10k">Rp10.000 <small data-hf-id="hf-38w9">0.89</small></span>
+            </div>
+          </div>
+          <p data-hf-id="hf-tc7q" class="footnote" id="f03b-footnote">Tujuh nominal didukung: <b data-hf-id="hf-mn56">Rp1.000 – Rp100.000</b></p>
+        </div>
+      </div>
+      <script>
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+
+        tl.fromTo("#f03b-bar", { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, duration: 0.4, ease: "power2.out" }, 0.1)
+          .fromTo("#f03b-kicker", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.16);
+
+        // three real detection photos arrive one at a time
+        tl.fromTo("#f03b-w20k", { x: -70, y: 20, opacity: 0 }, { x: 0, y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.5)
+          .fromTo("#f03b-w100k", { y: 44, scale: 0.94, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.65, ease: "power3.out" }, 0.95)
+          .fromTo("#f03b-w10k", { x: 70, y: 20, opacity: 0 }, { x: 0, y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 1.4);
+
+        // confidence chips pop once their photo has landed
+        [["#f03b-chip-20k", 1.05], ["#f03b-chip-100k", 1.5], ["#f03b-chip-10k", 1.95]].forEach(([sel, at]) => {
+          tl.fromTo(sel, { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "power3.out" }, at);
+        });
+
+        tl.fromTo("#f03b-footnote", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 2.3);
+
+        // ambient: the three panels drift out of phase — a held frame that still breathes
+        [["#f03b-w20k", 0], ["#f03b-w100k", 0.6], ["#f03b-w10k", 1.2]].forEach(([sel, off]) => {
+          tl.to(sel, { y: -8, duration: 2.0, yoyo: true, repeat: 1, ease: "sine.inOut" }, 2.8 + off);
+        });
+
+        window.__timelines["f04-bukti"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

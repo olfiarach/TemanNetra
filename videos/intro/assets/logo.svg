@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img"
+     shape-rendering="geometricPrecision"
+     aria-label="TemanNetra — pemindai uang Rupiah dengan suara">
+  <defs>
+    <linearGradient id="tn-card" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <linearGradient id="tn-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+  </defs>
+
+  <g id="mark">
+    <!-- actor 1: container card (arrival anchor) -->
+    <rect id="card" x="8" y="8" width="112" height="112" rx="24" fill="url(#tn-card)"/>
+
+    <!-- actor 2: the note (white ellipse) -->
+    <ellipse id="note" cx="64" cy="56" rx="30" ry="20" fill="#fff"/>
+
+    <!-- actor 3: the lens / coin, and its dark pupil -->
+    <circle id="coin" cx="64" cy="56" r="14" fill="url(#tn-accent)"/>
+    <circle id="pupil" cx="64" cy="56" r="7" fill="#1e293b"/>
+
+    <!-- actor 4: sight rays, drawn outward from the lens -->
+    <g id="rays" fill="none" stroke="url(#tn-accent)" stroke-linecap="round" stroke-width="2" opacity="0.6">
+      <path id="ray-c" pathLength="1" d="M64 40V30"/>
+      <path id="ray-r" pathLength="1" d="M64 40q8-14 16-14"/>
+      <path id="ray-l" pathLength="1" d="M64 40q-8-14-16-14"/>
+    </g>
+
+    <!-- actor 5: denomination lines, drawn left to right -->
+    <g id="lines" fill="none" stroke="url(#tn-accent)" stroke-linecap="round" stroke-width="3">
+      <path id="line-1" pathLength="1" d="M42 91.5H70" opacity="1"/>
+      <path id="line-2" pathLength="1" d="M42 97.5H86" opacity="0.7"/>
+      <path id="line-3" pathLength="1" d="M42 103.5H62" opacity="0.5"/>
+    </g>
+
+    <!-- actor 6: specular glint (secondary action, idle pulse target) -->
+    <circle id="glint" cx="56" cy="49" r="3.5" fill="#fff" opacity="0.9"/>
+  </g>
+</svg>

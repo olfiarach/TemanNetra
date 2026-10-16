@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>TemanNetra — video pengantar</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0e1116; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #0e1116; }
+      #root > div[data-composition-src] { position: absolute; inset: 0; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-nh7l" id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="36">
+      <!-- Slot windows overlap by the handoff length so both scenes are live during a transition. -->
+      <div data-hf-id="hf-so7w" id="el-logo" data-composition-id="f01-logo" data-composition-src="compositions/frames/01-logo.html" data-start="0" data-duration="4.6" data-track-index="1"></div>
+      <div data-hf-id="hf-o058" id="el-hook" data-composition-id="f02-hook" data-composition-src="compositions/frames/02-hook.html" data-start="4" data-duration="5.6" data-track-index="2"></div>
+      <div data-hf-id="hf-wbx2" id="el-alur" data-composition-id="f03-alur" data-composition-src="compositions/frames/03-alur.html" data-start="9" data-duration="6.6" data-track-index="1"></div>
+      <div data-hf-id="hf-mjh0" id="el-bukti" data-composition-id="f04-bukti" data-composition-src="compositions/frames/04-bukti.html" data-start="15" data-duration="9.6" data-track-index="2"></div>
+      <div data-hf-id="hf-ax6w" id="el-prinsip" data-composition-id="f05-prinsip" data-composition-src="compositions/frames/05-prinsip.html" data-start="24" data-duration="6.6" data-track-index="1"></div>
+      <div data-hf-id="hf-pku9" id="el-cta" data-composition-id="f06-cta" data-composition-src="compositions/frames/06-cta.html" data-start="30" data-duration="6" data-track-index="2"></div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Calm register: blur crossfade between the four middle handoffs.
+      const crossfade = (outSel, inSel, t) => {
+        tl.to(outSel, { opacity: 0, filter: "blur(12px)", scale: 1.03, duration: 0.5, ease: "power2.inOut" }, t);
+        tl.fromTo(inSel, { opacity: 0, filter: "blur(12px)", scale: 0.975 },
+          { opacity: 1, filter: "blur(0px)", scale: 1, duration: 0.5, ease: "power2.inOut" }, t + 0.05);
+      };
+
+      crossfade("#el-logo", "#el-hook", 4.0);
+      crossfade("#el-hook", "#el-alur", 9.0);
+      crossfade("#el-alur", "#el-bukti", 15.0);
+      crossfade("#el-bukti", "#el-prinsip", 24.0);
+
+      // Final handoff: colour dip through the canvas ink into the end card.
+      tl.to("#el-prinsip", { opacity: 0, duration: 0.24, ease: "power2.in" }, 30.0);
+      tl.fromTo("#el-cta", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, 30.1);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

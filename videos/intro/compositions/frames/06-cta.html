@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head><meta charset="UTF-8"></head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-400.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-700.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+        @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-400.woff2") format("woff2"); font-weight: 100 800; font-style: normal; }
+        #root {
+          position: absolute; inset: 0; overflow: hidden;
+          background: #0e1116;
+          font-family: "Atkinson Hyperlegible", sans-serif;
+          color: #eef0f4;
+          display: grid; place-items: center;
+        }
+        .scene { position: absolute; inset: 0; }
+        .glow { position: absolute; width: 1100px; height: 1100px; left: 50%; top: 50%;
+          margin: -550px 0 0 -550px; border-radius: 50%; opacity: 0;
+          background: radial-gradient(circle, rgba(13,148,136,0.16) 0%, rgba(13,148,136,0) 68%); }
+        .card { position: absolute; inset: 0; display: grid; justify-items: center;
+          align-content: center; padding: 0 120px; box-sizing: border-box; }
+        .mark { width: 128px; height: 128px; }
+        .url { margin: 44px 0 0; font-family: "JetBrains Mono", monospace; font-weight: 700;
+          font-size: 68px; letter-spacing: -0.01em; }
+        .url .slash { color: #f97316; }
+        .demo { margin: 26px 0 0; font-size: 32px; color: #aeb6c2; }
+        .demo b { color: #eef0f4; font-weight: 700; }
+        .hair { position: absolute; bottom: 140px; left: 50%; width: 300px; height: 1px;
+          margin-left: -150px; background: #2a323e; transform-origin: center; }
+        .status { position: absolute; bottom: 84px; left: 0; right: 0; text-align: center;
+          font-family: "JetBrains Mono", monospace; font-size: 21px; letter-spacing: 0.14em;
+          text-transform: uppercase; color: #9aa4b2; }
+      </style>
+      <div data-hf-id="hf-ax0e" id="root" data-composition-id="f06-cta" data-width="1920" data-height="1080" data-duration="6">
+        <div data-hf-id="hf-1mz9" class="scene" id="f06-scene">
+          <div data-hf-id="hf-km8z" class="glow" id="f06-glow"></div>
+          <div data-hf-id="hf-sv17" class="card" id="f06-card">
+            <svg data-hf-id="hf-z27w" class="mark" id="f06-mark" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <defs data-hf-id="hf-mh0t">
+                <lineargradient data-hf-id="hf-4n21" id="f06-tn-card" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop data-hf-id="hf-b5yc" offset="0%" stop-color="#0d9488" /><stop data-hf-id="hf-8634" offset="100%" stop-color="#0f766e" />
+                </lineargradient>
+                <lineargradient data-hf-id="hf-o3s1" id="f06-tn-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop data-hf-id="hf-142f" offset="0%" stop-color="#f97316" /><stop data-hf-id="hf-8ec8" offset="100%" stop-color="#ea580c" />
+                </lineargradient>
+              </defs>
+              <rect data-hf-id="hf-w258" x="8" y="8" width="112" height="112" rx="24" fill="url(#f06-tn-card)" />
+              <ellipse data-hf-id="hf-2w0p" cx="64" cy="56" rx="30" ry="20" fill="#fff" />
+              <circle data-hf-id="hf-whnr" cx="64" cy="56" r="14" fill="url(#f06-tn-accent)" />
+              <circle data-hf-id="hf-koap" cx="64" cy="56" r="7" fill="#1e293b" />
+              <g data-hf-id="hf-lj7d" fill="none" stroke="url(#f06-tn-accent)" stroke-linecap="round" stroke-width="2" opacity="0.6">
+                <path data-hf-id="hf-rwyu" d="M64 40V30" /><path data-hf-id="hf-xqwv" d="M64 40q8-14 16-14" /><path data-hf-id="hf-s16l" d="M64 40q-8-14-16-14" />
+              </g>
+              <g data-hf-id="hf-7otw" fill="none" stroke="url(#f06-tn-accent)" stroke-linecap="round" stroke-width="3">
+                <path data-hf-id="hf-68k6" d="M42 91.5H70" opacity="1" /><path data-hf-id="hf-ff8b" d="M42 97.5H86" opacity="0.7" /><path data-hf-id="hf-9qij" d="M42 103.5H62" opacity="0.5" />
+              </g>
+              <circle data-hf-id="hf-544g" cx="56" cy="49" r="3.5" fill="#fff" opacity="0.9" />
+            </svg>
+            <p data-hf-id="hf-6f6q" class="url" id="f06-url">github.com<span data-hf-id="hf-xpsd" class="slash">/</span>olfiarach<span data-hf-id="hf-3fgh" class="slash">/</span>TemanNetra</p>
+            <p data-hf-id="hf-rqzg" class="demo" id="f06-demo">Demo langsung: <b data-hf-id="hf-kq4v">olfiarach.github.io/TemanNetra</b></p>
+          </div>
+          <div data-hf-id="hf-4ux7" class="hair" id="f06-hair"></div>
+          <p data-hf-id="hf-aaoy" class="status" id="f06-status">Prototype akademik — bukan alat verifikasi uang</p>
+        </div>
+      </div>
+      <script>
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+        const LEAD = 0.35; // starts after the colour-dip transition into this scene
+
+        // glow blooms under the mark, mark settles in, then the URL wipes in
+        tl.fromTo("#f06-glow", { opacity: 0, scale: 0.84 }, { opacity: 1, scale: 1, duration: 1.1, ease: "power2.out" }, LEAD)
+          .fromTo("#f06-mark", { scale: 0, opacity: 0, y: -48 }, { scale: 1, opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, LEAD + 0.05)
+          .fromTo("#f06-url", { clipPath: "inset(0 100% 0 0)", opacity: 0 },
+            { clipPath: "inset(0 0% 0 0)", opacity: 1, duration: 0.85, ease: "power2.out" }, LEAD + 0.5)
+          .fromTo("#f06-demo", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, LEAD + 1.15)
+          .fromTo("#f06-hair", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power2.out" }, LEAD + 1.35)
+          .fromTo("#f06-status", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" }, LEAD + 1.45);
+
+        // ambient: mark keeps a barely-perceptible settle; glow breathes once
+        tl.fromTo("#f06-card", { scale: 1 }, { scale: 1.02, duration: 6, ease: "none" }, 0);
+        const ph = { p: 0 };
+        tl.to(ph, {
+          p: Math.PI, duration: 2.6, ease: "none",
+          onUpdate: () => {
+            const g = document.getElementById("f06-glow");
+            g.style.opacity = String(0.85 + Math.sin(ph.p) * 0.15);
+          }
+        }, LEAD + 1.1);
+
+        window.__timelines["f06-cta"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

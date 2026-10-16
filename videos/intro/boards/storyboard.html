@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TemanNetra — storyboard video pengantar</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; padding: 48px 40px 96px;
+        background: #f4f5f7; color: #14181f;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      header { max-width: 1480px; margin: 0 auto 40px; }
+      h1 { margin: 0 0 10px; font-size: 28px; letter-spacing: -0.01em; }
+      .meta { color: #5a6270; font-size: 15px; line-height: 1.6; }
+      .meta b { color: #14181f; }
+      .act {
+        max-width: 1480px; margin: 40px auto 16px;
+        font-size: 13px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+        color: #8a91a0;
+      }
+      .grid {
+        max-width: 1480px; margin: 0 auto;
+        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px;
+      }
+      .frame {
+        background: #fff; border-radius: 16px; padding: 16px;
+        box-shadow: 0 1px 2px rgba(20, 24, 31, 0.06), 0 12px 28px -18px rgba(20, 24, 31, 0.28);
+      }
+      .frame img { display: block; width: 100%; height: auto; border-radius: 10px; background: #0e1116; }
+      .title { margin-top: 14px; font-size: 17px; font-weight: 700; }
+      .time { margin-top: 2px; font-size: 13px; color: #626a78; font-variant-numeric: tabular-nums; }
+      .words { margin: 10px 0 2px; font-size: 14px; line-height: 1.55; color: #3c434f; }
+      @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>TemanNetra — storyboard video pengantar</h1>
+      <p class="meta">
+        1920×1080 · <b>±36 detik</b> · tanpa narasi (teks di layar) · Bahasa Indonesia<br />
+        Pesan: <b>TemanNetra membaca uang Rupiah lewat kamera dan mengucapkannya.</b><br />
+        Gambar di bawah adalah <b>pose statis</b> tiap frame (tata letak, tipografi, warna, aset asli repo) — gerakan belum ada.
+      </p>
+    </header>
+
+    <div class="grid">
+      <div class="frame">
+        <img src="stills/frame-00-at-3s.png" alt="" />
+        <div class="title">01: Logo</div>
+        <div class="time">0.0 – 4.0s</div>
+        <p class="words">Mark asli repo memainkan koreografi 1300&nbsp;ms dari <code>motion_spec.md</code> (card → note → lens → rays → lines), lalu lockup + wordmark.</p>
+      </div>
+
+      <div class="frame">
+        <img src="stills/frame-01-at-8s.png" alt="" />
+        <div class="title">02: Masalah &amp; janji</div>
+        <div class="time">4.0 – 9.0s</div>
+        <p class="words">Kalimat masalah dipecah per frasa, mendarat pada “TemanNetra membacakan nominalnya.” Kata kunci aksen oranye.</p>
+      </div>
+
+      <div class="frame">
+        <img src="stills/frame-02-at-14s.png" alt="" />
+        <div class="title">03: Cara kerja</div>
+        <div class="time">9.0 – 15.0s</div>
+        <p class="words">Tiga node alur: Kamera → YOLOv8n ONNX (onnxruntime-web) → Suara + getar. Garis penghubung menggambar; catatan privasi di bawah.</p>
+      </div>
+
+      <div class="frame">
+        <img src="stills/frame-03-at-23s.png" alt="" />
+        <div class="title">04: Bukti deteksi</div>
+        <div class="time">15.0 – 24.0s</div>
+        <p class="words">Tiga foto deteksi nyata dari repo (Rp20.000 0.90 · Rp100.000 0.98 · Rp10.000 0.89) masuk bertahap; kamera bergeser pelan antar panel.</p>
+      </div>
+
+      <div class="frame">
+        <img src="stills/frame-04-at-29s.png" alt="" />
+        <div class="title">05: Prinsip</div>
+        <div class="time">24.0 – 30.0s</div>
+        <p class="words">“Lebih baik hening daripada salah bilang.” plus aturan konfirmasi 3 frame dan tiga badge prinsip.</p>
+      </div>
+
+      <div class="frame">
+        <img src="stills/frame-05-at-35.5s.png" alt="" />
+        <div class="title">06: Penutup</div>
+        <div class="time">30.0 – 36.0s</div>
+        <p class="words">URL repo + demo GitHub Pages, ditutup baris status jujur “prototype akademik — bukan alat verifikasi uang”.</p>
+      </div>
+    </div>
+  </body>
+</html>

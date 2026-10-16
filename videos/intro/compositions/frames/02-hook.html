@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head><meta charset="UTF-8"></head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-400.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-700.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+        @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-400.woff2") format("woff2"); font-weight: 100 800; font-style: normal; }
+        #root {
+          position: absolute; inset: 0; overflow: hidden;
+          background: #0e1116;
+          font-family: "Atkinson Hyperlegible", sans-serif;
+          color: #eef0f4;
+        }
+        .scene { position: absolute; inset: 0; }
+        .ghost {
+          position: absolute; right: -80px; bottom: -120px;
+          font-family: "JetBrains Mono", monospace; font-weight: 700;
+          font-size: 560px; color: #f97316; opacity: 0.05; line-height: 1;
+        }
+        .content { position: absolute; inset: 0; display: flex; flex-direction: column;
+          justify-content: center; padding: 0 180px; box-sizing: border-box; }
+        .kicker { font-family: "JetBrains Mono", monospace; font-size: 24px;
+          letter-spacing: 0.3em; text-transform: uppercase; color: #aeb6c2; margin: 0 0 34px; }
+        .kicker .bar { display: inline-block; width: 56px; height: 4px; background: #f97316;
+          border-radius: 2px; margin-right: 24px; vertical-align: 8px; }
+        .headline { font-size: 108px; font-weight: 700; line-height: 1.08;
+          letter-spacing: -0.02em; margin: 0; max-width: 1560px; }
+        .headline .w { display: inline-block; margin-right: 24px; }
+        .headline .accent { color: #f97316; position: relative; }
+        .headline .ul { position: absolute; left: 0; bottom: 4px; display: block;
+          width: 100%; height: 8px; background: #f97316; border-radius: 4px; }
+        .support { margin: 40px 0 0; font-size: 34px; font-weight: 400; color: #aeb6c2;
+          max-width: 1250px; line-height: 1.4; }
+      </style>
+      <div data-hf-id="hf-jjd6" id="root" data-composition-id="f02-hook" data-width="1920" data-height="1080" data-duration="5">
+        <div data-hf-id="hf-ewo9" class="scene" id="f02-scene">
+          <div data-hf-id="hf-7ngi" class="ghost" id="f02-ghost" data-layout-ignore="">Rp</div>
+          <div data-hf-id="hf-mcm7" class="content">
+            <p data-hf-id="hf-767g" class="kicker" id="f02-kicker"><span data-hf-id="hf-35g6" class="bar" id="f02-bar"></span>Masalah sehari-hari</p>
+            <h1 data-hf-id="hf-78p5" class="headline" id="f02-headline">
+              <span data-hf-id="hf-mo5i" class="w" id="f02-w1">TemanNetra</span><span data-hf-id="hf-5dw0" class="w accent" id="f02-w2">membacakan<span data-hf-id="hf-qk5i" class="ul" id="f02-ul"></span></span><span data-hf-id="hf-yrph" class="w" id="f02-w3">nominalnya.</span>
+            </h1>
+            <p data-hf-id="hf-46wo" class="support" id="f02-support">Cukup tunjukkan uang ke kamera ponsel — nominal Rupiah diucapkan dalam Bahasa Indonesia.</p>
+          </div>
+        </div>
+      </div>
+      <script>
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+        const out4 = "power4.out";
+
+        // kicker: bar sweeps in, label fades up
+        tl.fromTo("#f02-bar", { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, duration: 0.4, ease: "power2.out" }, 0.10)
+          .fromTo("#f02-kicker", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.16);
+
+        // statement builds word by word (waterfall arrival: binary reveal + whip)
+        tl.set("#f02-w1", { opacity: 0, y: 84 }, 0.34)
+          .to("#f02-w1", { opacity: 1, y: 0, duration: 0.18, ease: out4 }, 0.34)
+          .set("#f02-w2", { opacity: 0, y: 84 }, 0.50)
+          .to("#f02-w2", { opacity: 1, y: 0, duration: 0.17, ease: out4 }, 0.50)
+          .set("#f02-w3", { opacity: 0, y: 84 }, 0.65)
+          .to("#f02-w3", { opacity: 1, y: 0, duration: 0.17, ease: out4 }, 0.65)
+          // accent underline draws under the keyword once the line settles
+          .fromTo("#f02-ul", { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, duration: 0.42, ease: "power2.out" }, 0.95)
+          .fromTo("#f02-support", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, 1.10);
+
+        // ambient: the decorative denomination drifts slowly behind the copy
+        tl.fromTo("#f02-ghost", { x: -50, y: 20 }, { x: 50, y: -20, duration: 5, ease: "none" }, 0);
+
+        window.__timelines["f02-hook"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

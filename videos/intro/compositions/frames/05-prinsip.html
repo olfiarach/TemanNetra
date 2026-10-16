@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head><meta charset="UTF-8"></head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-400.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+        @font-face { font-family: "Atkinson Hyperlegible"; src: url("assets/fonts/atkinson-700.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+        @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-400.woff2") format("woff2"); font-weight: 100 800; font-style: normal; }
+        #root {
+          position: absolute; inset: 0; overflow: hidden;
+          background: #0e1116;
+          font-family: "Atkinson Hyperlegible", sans-serif;
+          color: #eef0f4;
+        }
+        .scene { position: absolute; inset: 0; }
+        .ghost {
+          position: absolute; right: -40px; bottom: -150px;
+          font-family: "JetBrains Mono", monospace; font-weight: 700;
+          font-size: 560px; color: #0d9488; opacity: 0.05; line-height: 1;
+        }
+        .quote-mark { position: absolute; left: 150px; top: 150px;
+          font-weight: 700; font-size: 200px; line-height: 0.6; color: #f97316; }
+        .content { position: absolute; inset: 0; display: flex; flex-direction: column;
+          justify-content: center; padding: 0 180px; box-sizing: border-box; }
+        .quote { font-size: 96px; font-weight: 700; line-height: 1.14; letter-spacing: -0.02em;
+          margin: 0; max-width: 1450px; }
+        .quote .muted { color: #aeb6c2; }
+        .rule { display: block; width: 120px; height: 6px; background: #f97316;
+          border-radius: 3px; margin: 48px 0 40px; transform-origin: left center; }
+        .detail { font-size: 34px; font-weight: 400; color: #aeb6c2; line-height: 1.5; margin: 0; max-width: 1330px; }
+        .detail b { color: #eef0f4; font-weight: 700; }
+        .badge-row { position: absolute; bottom: 110px; left: 180px; display: flex; gap: 18px; }
+        .badge { font-family: "JetBrains Mono", monospace; font-size: 24px; letter-spacing: 0.14em;
+          text-transform: uppercase; color: #aeb6c2; border: 1px solid #2a323e;
+          border-radius: 999px; padding: 14px 26px; }
+        .badge.on { color: #0d9488; border-color: #0d9488; }
+      </style>
+      <div data-hf-id="hf-agne" id="root" data-composition-id="f05-prinsip" data-width="1920" data-height="1080" data-duration="6">
+        <div data-hf-id="hf-7iem" class="scene" id="f05-scene">
+          <div data-hf-id="hf-uf2d" class="ghost" id="f05-ghost" data-layout-ignore="">3×</div>
+          <div data-hf-id="hf-mljh" class="quote-mark" id="f05-quotemark">“</div>
+          <div data-hf-id="hf-mcm7" class="content">
+            <h1 data-hf-id="hf-cgrd" class="quote" id="f05-quote">Lebih baik <span data-hf-id="hf-hyu3" class="muted">hening</span> daripada salah bilang.</h1>
+            <span data-hf-id="hf-tp1z" class="rule" id="f05-rule"></span>
+            <p data-hf-id="hf-7a54" class="detail" id="f05-detail">Nominal diumumkan hanya setelah <b data-hf-id="hf-5u3b">tiga frame berturut-turut</b> sepakat. Banyak lembar atau nominal yang bertabrakan dianggap belum pasti — dan tidak pernah dihitung atau diucapkan.</p>
+          </div>
+          <div data-hf-id="hf-qixg" class="badge-row" id="f05-badges">
+            <span data-hf-id="hf-bw8b" class="badge on" id="f05-badge-1">3 frame cocok</span>
+            <span data-hf-id="hf-nwe5" class="badge" id="f05-badge-2">Multi-lembar = diam</span>
+            <span data-hf-id="hf-3lkl" class="badge" id="f05-badge-3">Tanpa klaim akurasi</span>
+          </div>
+        </div>
+      </div>
+      <script>
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+
+        tl.fromTo("#f05-quotemark", { opacity: 0, scale: 0.6, transformOrigin: "left top" },
+          { opacity: 1, scale: 1, duration: 0.5, ease: "power3.out" }, 0.15)
+          .fromTo("#f05-quote", { opacity: 0, y: 44 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.35)
+          .fromTo("#f05-rule", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power2.out" }, 0.95)
+          .fromTo("#f05-detail", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 1.2);
+
+        [["#f05-badge-1", 1.7], ["#f05-badge-2", 1.86], ["#f05-badge-3", 2.02]].forEach(([sel, at]) => {
+          tl.fromTo(sel, { opacity: 0, y: 18, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.42, ease: "power3.out" }, at);
+        });
+
+        // ambient: the ghost numeral drifts out slowly behind the quote
+        tl.fromTo("#f05-ghost", { x: 0, y: 0 }, { x: -60, y: -30, duration: 6, ease: "none" }, 0);
+
+        window.__timelines["f05-prinsip"] = tl;
+      </script>
+    </template>
+  </body>
+</html>
